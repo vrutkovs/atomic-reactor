@@ -24,9 +24,6 @@ from tempfile import NamedTemporaryFile
 
 
 class PulpUploader(object):
-    CER = 'pulp.cer'
-    KEY = 'pulp.key'
-
     def __init__(self, workflow, pulp_instance, filename, log, pulp_secret_path=None, username=None,
                  password=None):
         self.workflow = workflow
@@ -61,14 +58,18 @@ class PulpUploader(object):
         elif r_chk == 3:
             raise RuntimeError('/repositories references external images')
 
-    def _set_auth(self, p):
-        # The pulp.cer and pulp.key values must be set in a
-        # 'Secret'-type resource, and referenced by the sourceSecret
-        # for the build. The path to our files is now given in the
-        # environment variable SOURCE_SECRET_PATH.
+    def push_tarball_to_pulp(self, image_names):
+        self.log.info("checking image before upload")
+        self._check_file()
+
         if self.username and self.password:
+            p = dockpulp.Pulp(env=self.pulp_instance)
             p.login(self.username, self.password)
         else:
+            # The pulp.cer and pulp.key values must be set in a
+            # 'Secret'-type resource, and referenced by the sourceSecret
+            # for the build. The path to our files is now given in the
+            # environment variable SOURCE_SECRET_PATH.
             if self.pulp_secret_path is not None:
                 path = self.pulp_secret_path
                 self.log.info("using configured path %s for secrets" % path)
@@ -77,24 +78,16 @@ class PulpUploader(object):
                 self.log.info("SOURCE_SECRET_PATH=%s from environment" % path)
 
             # Work out the pathnames for the certificate/key pair.
-            cer = os.path.join(path, self.CER)
-            key = os.path.join(path, self.KEY)
+            cer = os.path.join(path, dockpulp.Pulp.AUTH_CER_FILE)
+            key = os.path.join(path, dockpulp.Pulp.AUTH_KEY_FILE)
 
             if not os.path.exists(cer):
                 raise RuntimeError("Certificate does not exist.")
             if not os.path.exists(key):
                 raise RuntimeError("Key does not exist.")
 
-            # Tell dockpulp.
-            p.certificate = cer
-            p.key = key
-
-    def push_tarball_to_pulp(self, image_names):
-        self.log.info("checking image before upload")
-        self._check_file()
-
-        p = dockpulp.Pulp(env=self.pulp_instance)
-        self._set_auth(p)
+            p = dockpulp.Pulp(env=self.pulp_instance,
+                              override_config={"certificates": path})
 
         # {
         #     "repo-id": {
