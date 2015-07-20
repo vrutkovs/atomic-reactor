@@ -155,8 +155,11 @@ class InjectYumRepoPlugin(PreBuildPlugin):
                 repos_host_cont_mapping[repo] = repo_relative_path
 
             # Find out the USER inherited from the base image
-            inspect = self.workflow.builder.inspect_base_image()
-            inherited_user = inspect['Config'].get('User', '')
+            inherited_user = ""
+            try:
+                inherited_user = self.workflow.base_image_inspect['Config'].get('User', '')
+            except (AttributeError, TypeError):
+                self.log.warning("base image has improper metadata")
             df = DockerfileParser(self.workflow.builder.df_path)
             df.lines = add_yum_repos_to_dockerfile(repos_host_cont_mapping,
                                                    df, inherited_user)
