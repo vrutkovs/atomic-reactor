@@ -35,13 +35,21 @@ DEFAULT_MOUNTPOINT = "/atomic-reactor-nfs-mountpoint/"
 
 
 def mount(server_path, mountpoint, args=None, mount_type="nfs"):
-    args = args or ["nolock"]
+    args = args or ["nolock", "async", "hard", "intr", "tcp"]
     rendered_args = ",".join(args)
     cmd = [
         "mount",
         "-t", mount_type,
         "-o", rendered_args,
         server_path,
+        mountpoint
+    ]
+    subprocess.check_call(cmd)
+
+
+def umount(mountpoint):
+    cmd = [
+        "umount",
         mountpoint
     ]
     subprocess.check_call(cmd)
@@ -97,6 +105,10 @@ class CopyBuiltImageToNFSPlugin(PostBuildPlugin):
         self.log.debug("mount NFS %s at %s", repr(self.nfs_server_path), self.mountpoint)
         mount(self.nfs_server_path, self.mountpoint)
 
+    def umount(self):
+        self.log.debug("unmount mountpoint %s", self.mountpoint)
+        umount(self.mountpoint)
+
     def run(self):
         if len(self.workflow.exported_image_sequence) == 0:
             raise RuntimeError('no exported image to upload to nfs')
@@ -129,3 +141,8 @@ class CopyBuiltImageToNFSPlugin(PostBuildPlugin):
             self.log.debug("CopyBuiltImagePlugin.run() success")
         else:
             self.log.error("CopyBuiltImagePlugin.run() unknown error")
+
+        try:
+            self.umount()
+        except Exception as ex:
+            self.log.warning("umount unsuccessful: %r", ex)
