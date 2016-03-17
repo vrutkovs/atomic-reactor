@@ -47,12 +47,13 @@ setup(
     author_email='atomic-devel@projectatomic.io',
     url=HOMEPAGE,
     license="BSD",
+    scripts=['bin/atomic-reactor-pycallgraph'],
     entry_points={
         'console_scripts': ['atomic-reactor=atomic_reactor.cli.main:run',
+                            'atomic-reactor-pycallgraph=atomic_reactor.cli.main:pycallgraph_run',
                             'pulpsecret-gen=atomic_reactor.cli.secret:run'],
     },
     packages=find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"]),
     install_requires=_install_requirements(),
     data_files=data_files.items(),
 )
-

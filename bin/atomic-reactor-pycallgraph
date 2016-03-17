@@ -1,0 +1,12 @@
+#!/usr/bin/env python
+
+import pycallgraph
+filter_func = pycallgraph.GlobbingFilter(
+    include=['atomic_reactor.*', 'docker_scripts.*'])
+pycallgraph.start_trace(filter_func=filter_func)
+
+from atomic_reactor.cli.main import CLI
+cli = CLI()
+cli.run()
+
+pycallgraph.make_dot_graph('/tmp/pycallgraph.png')
