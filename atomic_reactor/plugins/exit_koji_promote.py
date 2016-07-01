@@ -514,6 +514,7 @@ class KojiPromotePlugin(ExitPlugin):
                           koji_task_id)
             extra['container_koji_task_id'] = koji_task_id
             task_id = koji_task_id
+            self.log.info("setting task_id to %s", task_id)
 
         fs_result = self.workflow.prebuild_results.get(AddFilesystemPlugin.key)
         if fs_result is not None:
@@ -535,6 +536,7 @@ class KojiPromotePlugin(ExitPlugin):
             'extra': extra,
             'task_id': task_id
         }
+        self.log.info(build)
 
         if self.metadata_only:
             build['metadata_only'] = True
