@@ -505,12 +505,15 @@ class KojiPromotePlugin(ExitPlugin):
         if not isinstance(source, GitSource):
             raise RuntimeError('git source required')
 
+        task_id = None
+
         extra = {'image': {}}
         koji_task_id = metadata.get('labels', {}).get('koji-task-id')
         if koji_task_id is not None:
             self.log.info("build configuration created by Koji Task ID %s",
                           koji_task_id)
             extra['container_koji_task_id'] = koji_task_id
+            task_id = koji_task_id
 
         fs_result = self.workflow.prebuild_results.get(AddFilesystemPlugin.key)
         if fs_result is not None:
@@ -530,6 +533,7 @@ class KojiPromotePlugin(ExitPlugin):
             'start_time': start_time,
             'end_time': int(time.time()),
             'extra': extra,
+            'task_id': task_id
         }
 
         if self.metadata_only:
