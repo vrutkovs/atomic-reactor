@@ -162,6 +162,7 @@ class AddLabelsPlugin(PreBuildPlugin):
         """
         try:
             config = self.workflow.base_image_inspect[INSPECT_CONFIG]
+            self.log.debug(config)
         except (AttributeError, TypeError):
             message = "base image was not inspected"
             self.log.error(message)
