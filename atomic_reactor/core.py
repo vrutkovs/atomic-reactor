@@ -519,6 +519,7 @@ class DockerTasker(LastLogger):
         if isinstance(image_id, ImageName):
             image_id = image_id.to_str()
         image_metadata = self.d.inspect_image(image_id)
+        logger.debug("image metadata = '%s'", image_metadata)
         return image_metadata
 
     def remove_image(self, image_id, force=False, noprune=False):
