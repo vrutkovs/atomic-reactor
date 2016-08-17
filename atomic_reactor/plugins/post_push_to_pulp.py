@@ -85,6 +85,7 @@ class PulpUploader(object):
     def _check_file(self):
         # Sanity-check image
         manifest = dockpulp.imgutils.get_manifest(self.filename)
+        logger.debug(manifest)
         vers = dockpulp.imgutils.get_versions(manifest)
         for _, version in vers.items():
             verparts = version.split('.')
