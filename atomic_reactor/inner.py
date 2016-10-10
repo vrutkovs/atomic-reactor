@@ -18,7 +18,8 @@ import signal
 from atomic_reactor.build import InsideBuilder
 from atomic_reactor.plugin import (
     PostBuildPluginsRunner, PreBuildPluginsRunner, InputPluginsRunner, PrePublishPluginsRunner,
-    ExitPluginsRunner, PluginFailedException, AutoRebuildCanceledException, BuildCanceledException)
+    ExitPluginsRunner, PluginFailedException, AutoRebuildCanceledException, BuildCanceledException,
+    BuildStepPluginRunner)
 from atomic_reactor.source import get_source_instance_for
 from atomic_reactor.util import ImageName
 
@@ -176,7 +177,7 @@ class DockerRegistry(Registry):
         """
         super(DockerRegistry, self).__init__(uri, insecure=insecure)
         self.digests = {}  # maps tags (str) to their digest, if available
-        self.config = None  # stores image config from the registry, 
+        self.config = None  # stores image config from the registry,
         # media type of the config is application/vnd.docker.container.image.v1+json
 
 
@@ -240,7 +241,7 @@ class DockerBuildWorkflow(object):
 
     def __init__(self, source, image, prebuild_plugins=None, prepublish_plugins=None,
                  postbuild_plugins=None, exit_plugins=None, plugin_files=None,
-                 openshift_build_selflink=None, **kwargs):
+                 openshift_build_selflink=None, buildstep_plugin=None, **kwargs):
         """
         :param source: dict, where/how to get source code to put in image
         :param image: str, tag for built image ([registry/]image_name[:tag])
@@ -255,10 +256,12 @@ class DockerBuildWorkflow(object):
         self.image = image
 
         self.prebuild_plugins_conf = prebuild_plugins
+        self.buildstep_plugin_conf = buildstep_plugin
         self.prepublish_plugins_conf = prepublish_plugins
         self.postbuild_plugins_conf = postbuild_plugins
         self.exit_plugins_conf = exit_plugins
         self.prebuild_results = {}
+        self.buildstep_result = {}
         self.postbuild_results = {}
         self.prepub_results = {}
         self.exit_results = {}
@@ -343,7 +346,16 @@ class DockerBuildWorkflow(object):
             start_time = datetime.datetime.now()
             self.plugins_timestamps['dockerbuild'] = start_time.isoformat()
 
-            build_result = self.builder.build()
+            buildstep_runner = BuildStepPluginRunner(self.builder.tasker, self,
+                                                     self.buildstep_plugin_conf,
+                                                     plugin_files=self.plugin_files)
+            try:
+                buildstep_runner.run()
+            except PluginFailedException as ex:
+                logger.error('buildstep plugin failed: %s', ex)
+                raise
+
+            build_result = buildstep_runner.get_build_result()
 
             try:
                 finish_time = datetime.datetime.now()
