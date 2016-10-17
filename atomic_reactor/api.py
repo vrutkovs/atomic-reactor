@@ -24,6 +24,7 @@ __all__ = (
 try:
     from typing import Any
     from atomic_reactor.build import BuildResult
+    from atomic_reactor.inner import BuildResults
 except:
     pass
 
@@ -67,7 +68,7 @@ def build_image_in_privileged_container(
         parent_registry=None, target_registries=None, push_buildroot_to=None,
         parent_registry_insecure=False, target_registries_insecure=False,
         dont_pull_base_image=False, **kwargs):
-    # type: (str, Dict[str, str], str, str, List[str], str, bool, bool, bool, **Any) -> BuildResult
+    # type: (str, Dict[str, str], str, str, List[str], str, bool, bool, bool, **Any) -> BuildResults
     """
     build image from provided dockerfile (specified by `source`) in privileged container by
     running another docker instance inside the container
@@ -99,7 +100,7 @@ def build_image_using_hosts_docker(build_image, source, image,
         parent_registry=None, target_registries=None, push_buildroot_to=None,
         parent_registry_insecure=False, target_registries_insecure=False,
         dont_pull_base_image=False, **kwargs):
-    # type: (str, Dict[str, str], str, str, List[str], str, bool, bool, bool, **Any) -> BuildResult
+    # type: (str, Dict[str, str], str, str, List[str], str, bool, bool, bool, **Any) -> BuildResults
     """
     build image from provided dockerfile (specified by `source`) in privileged container
     using docker from host

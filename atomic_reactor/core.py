@@ -599,7 +599,7 @@ class DockerTasker(LastLogger):
         return response
 
     def wait(self, container_id):
-        # type: (str, int) -> int
+        # type: (str) -> int
         """
         wait for container to finish the job (may run infinitely)
 

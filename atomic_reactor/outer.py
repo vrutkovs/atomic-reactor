@@ -22,7 +22,6 @@ from atomic_reactor.util import wait_for_command, ImageName
 # this import is required for mypy to work correctly
 try:
     from typing import Any
-    import types
 except:
     pass
 
@@ -48,7 +47,7 @@ class BuildManager(BuilderStateMachine):
         self.dt = DockerTasker()
 
     def _build(self, build_method):
-        # type: (types.FunctionType) -> BuildResults
+        # type: (partial[str]) -> BuildResults
         """
         build image from provided build_args
 
@@ -138,6 +137,7 @@ class BuildManager(BuilderStateMachine):
 
 class PrivilegedBuildManager(BuildManager):
     def build(self):
+        # type: () -> BuildResults
         w = BuildContainerFactory()
         return super(PrivilegedBuildManager, self)._build(
             partial(BuildContainerFactory.build_image_privileged_container, w))
@@ -145,6 +145,7 @@ class PrivilegedBuildManager(BuildManager):
 
 class DockerhostBuildManager(BuildManager):
     def build(self):
+        # type: () -> BuildResults
         w = BuildContainerFactory()
         return super(DockerhostBuildManager, self)._build(
             partial(BuildContainerFactory.build_image_dockerhost, w))
