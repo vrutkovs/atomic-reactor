@@ -31,12 +31,18 @@ import json
 import docker
 from docker.errors import APIError
 
-from atomic_reactor.constants import CONTAINER_SHARE_PATH, CONTAINER_SHARE_SOURCE_SUBDIR,\
-        BUILD_JSON, DOCKER_SOCKET_PATH
+from atomic_reactor.constants import (
+    CONTAINER_SHARE_PATH, CONTAINER_SHARE_SOURCE_SUBDIR, BUILD_JSON, DOCKER_SOCKET_PATH
+)
 from atomic_reactor.source import get_source_instance_for
 from atomic_reactor.util import (
     ImageName, wait_for_command, clone_git_repo, figure_out_dockerfile, Dockercfg)
 
+# this import is required for mypy to work correctly
+try:
+    from typing import Any
+except:
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -46,16 +52,16 @@ class LastLogger(object):
     provide method for getting last log
     """
 
-    def __init__(self):
-        self._last_logs = []
+    def __init__(self):  # type: () -> None
+        self._last_logs = []  # type: List[str]
 
     @property
-    def last_logs(self):
+    def last_logs(self):  # type: () -> List[str]
         """ logs from last operation """
         return self._last_logs
 
     @last_logs.setter
-    def last_logs(self, value):
+    def last_logs(self, value):  # type: (List[str]) -> None
         self._last_logs = value
 
 
@@ -64,10 +70,11 @@ class BuildContainerFactory(object):
     set of methods for building images inside containers
     """
 
-    def __init__(self):
+    def __init__(self):  # type: () -> None
         self.tasker = DockerTasker()
 
     def _check_build_input(self, image, args_path):
+        # type: (str, str) -> None
         """
         Internal method, validate provided args.
 
@@ -83,11 +90,12 @@ class BuildContainerFactory(object):
             logger.error("unable to open json arguments: %r", ex)
             raise RuntimeError("Unable to open json arguments: %r" % ex)
 
-        if not self.tasker.image_exists(image):
+        if not self.tasker.image_exists(image_class):
             logger.error("provided build image doesn't exist: '%s'", image)
             raise RuntimeError("Provided build image doesn't exist: '%s'" % image)
 
     def _obtain_source_from_path_if_needed(self, local_path, container_path=CONTAINER_SHARE_PATH):
+        # type: (str, str) -> None
         # TODO: maybe we should do this for any provider? (if we expand to various providers
         #  like mercurial, we don't to force container to have mercurial installed, etc.)
         build_json_path = os.path.join(local_path, BUILD_JSON)
@@ -100,13 +108,14 @@ class BuildContainerFactory(object):
             logger.debug('verifying that %s exists: %s', local_path, os.path.exists(local_path))
             # now modify the build json
             build_json['source']['uri'] =\
-                    'file://' + os.path.join(container_path, CONTAINER_SHARE_SOURCE_SUBDIR)
+                'file://' + os.path.join(container_path, CONTAINER_SHARE_SOURCE_SUBDIR)
             with open(build_json_path, 'w') as fp:
                 json.dump(build_json, fp)
         # else we do nothing
 
     @staticmethod
     def _volume_bind_understands_mode():
+        # type: () -> bool
         # docker.utils.convert_volume_binds() understands 'mode' since docker-py-1.3.0
         # returns ['/a/:/b/:rw'] with docker-py < 1.3.0 and ['/a/:/b/:ro,Z'] with >= 1.3.0
         bind = docker.utils.convert_volume_binds({'/a/': {'bind': '/b/', 'mode': 'ro,Z'}})
@@ -115,6 +124,7 @@ class BuildContainerFactory(object):
         return False
 
     def build_image_dockerhost(self, build_image, json_args_path):
+        # type: (str, str) -> str
         """
         Build docker image inside privileged container using docker from host
         (mount docker socket inside container).
@@ -125,8 +135,8 @@ class BuildContainerFactory(object):
         :param build_image: str, name of image where build is performed
         :param json_args_path: str, this dir is mounted inside build container and used
                                as a way to transport data between host and buildroot; there
-                               has to be a file inside this dir with name atomic_reactor.BUILD_JSON which
-                               is used to feed build
+                               has to be a file inside this dir with name atomic_reactor.BUILD_JSON
+                               which is used to feed build
         :return: str, container id
         """
         logger.info("building image '%s' in container using docker from host", build_image)
@@ -135,10 +145,11 @@ class BuildContainerFactory(object):
         self._obtain_source_from_path_if_needed(json_args_path, CONTAINER_SHARE_PATH)
 
         if not os.path.exists(DOCKER_SOCKET_PATH):
-            logger.error("looks like docker is not running because there is no socket at: %s", DOCKER_SOCKET_PATH)
+            logger.error("looks like docker is not running because there is no socket at: %s",
+                         DOCKER_SOCKET_PATH)
             raise RuntimeError("docker socket not found: %s" % DOCKER_SOCKET_PATH)
 
-        volume_bindings = {
+        volume_bindings = {  # type: Dict[str, Dict[str, Any]]
             DOCKER_SOCKET_PATH: {
                 'bind': DOCKER_SOCKET_PATH,
             },
@@ -151,11 +162,11 @@ class BuildContainerFactory(object):
             volume_bindings[DOCKER_SOCKET_PATH]['mode'] = 'ro'
             volume_bindings[json_args_path]['mode'] = 'rw,Z'
         else:
-            volume_bindings[DOCKER_SOCKET_PATH]['ro'] = True
-            volume_bindings[json_args_path]['rw'] = True
+            volume_bindings[DOCKER_SOCKET_PATH]['ro'] = True  # type: ignore
+            volume_bindings[json_args_path]['rw'] = True  # type: ignore
 
         logger.debug('build json mounted in container: %s',
-                open(os.path.join(json_args_path, BUILD_JSON)).read())
+                     open(os.path.join(json_args_path, BUILD_JSON)).read())
         container_id = self.tasker.run(
             ImageName.parse(build_image),
             create_kwargs={'volumes': [DOCKER_SOCKET_PATH, json_args_path]},
@@ -166,6 +177,7 @@ class BuildContainerFactory(object):
         return container_id
 
     def build_image_privileged_container(self, build_image, json_args_path):
+        # type: (str, str) -> str
         """
         Build image inside privileged container: this will run another docker instance inside
 
@@ -174,8 +186,8 @@ class BuildContainerFactory(object):
         :param build_image: str, name of image where build is performed
         :param json_args_path: str, this dir is mounted inside build container and used
                                as a way to transport data between host and buildroot; there
-                               has to be a file inside this dir with name atomic_reactor.BUILD_JSON which
-                               is used to feed build
+                               has to be a file inside this dir with name atomic_reactor.BUILD_JSON
+                               which is used to feed build
         :return: dict, keys container_id and stream
         """
         logger.info("building image '%s' inside privileged container", build_image)
@@ -183,7 +195,7 @@ class BuildContainerFactory(object):
         self._check_build_input(build_image, json_args_path)
         self._obtain_source_from_path_if_needed(json_args_path, CONTAINER_SHARE_PATH)
 
-        volume_bindings = {
+        volume_bindings = {   # type: Dict[str, Dict[str, Any]]
             json_args_path: {
                 'bind': CONTAINER_SHARE_PATH,
             },
@@ -192,10 +204,10 @@ class BuildContainerFactory(object):
         if self._volume_bind_understands_mode():
             volume_bindings[json_args_path]['mode'] = 'rw,Z'
         else:
-            volume_bindings[json_args_path]['rw'] = True
+            volume_bindings[json_args_path]['rw'] = True  # type: ignore
 
         logger.debug('build json mounted in container: %s',
-                open(os.path.join(json_args_path, BUILD_JSON)).read())
+                     open(os.path.join(json_args_path, BUILD_JSON)).read())
         container_id = self.tasker.run(
             ImageName.parse(build_image),
             create_kwargs={'volumes': [json_args_path]},
@@ -207,14 +219,15 @@ class BuildContainerFactory(object):
 
 
 class DockerTasker(LastLogger):
-    def __init__(self, base_url=None, timeout=120, **kwargs):
+    def __init__(self, base_url=None, timeout=120):
+        # type: (str, int) -> None
         """
         Constructor
 
-        :param base_url: str, docker connection URL
-        :param timeout: int, timeout for docker client
+        :param base_url: docker connection URL
+        :param timeout: timeout for docker client
         """
-        super(DockerTasker, self).__init__(**kwargs)
+        super(DockerTasker, self).__init__()
 
         client_kwargs = {}
         if base_url:
@@ -228,6 +241,8 @@ class DockerTasker(LastLogger):
         self.d = docker.Client(timeout=timeout, **client_kwargs)
 
     def build_image_from_path(self, path, image, stream=False, use_cache=False, remove_im=True):
+        # TODO: set correct class here
+        # type: (str, ImageName, bool, bool, bool) -> object
         """
         build image from provided path and tag it
 
@@ -243,16 +258,18 @@ class DockerTasker(LastLogger):
         """
         logger.info("building image '%s' from path '%s'", image, path)
         try:
-            response = self.d.build(path=path, tag=image.to_str(), stream=stream, nocache=not use_cache,
-                                    rm=remove_im, pull=False)  # returns generator
+            response = self.d.build(path=path, tag=image.to_str(), stream=stream,
+                                    nocache=not use_cache, rm=remove_im, pull=False)
         except TypeError:
             # because changing api is fun
-            response = self.d.build(path=path, tag=image.to_str(), stream=stream, nocache=not use_cache,
-                                    rm=remove_im)  # returns generator
+            response = self.d.build(path=path, tag=image.to_str(), stream=stream,
+                                    nocache=not use_cache, rm=remove_im)
         return response
 
-    def build_image_from_git(self, url, image, git_path=None, git_commit=None, copy_dockerfile_to=None,
-                             stream=False, use_cache=False):
+    def build_image_from_git(self, url, image, git_path=None, git_commit=None,
+                             copy_dockerfile_to=None, stream=False, use_cache=False):
+        # TODO: set correct class here
+        # type: (str, ImageName, str, str, bool, bool) -> object
         """
         build image from provided url and tag it
 
@@ -262,13 +279,14 @@ class DockerTasker(LastLogger):
         :param url: str
         :param image: ImageName, name of the resulting image
         :param git_path: str, path to dockerfile within gitrepo
+        :param git_commit: commit hash
         :param copy_dockerfile_to: str, copy dockerfile to provided path
         :param stream: bool, True returns generator, False returns str
         :param use_cache: bool, True if you want to use cache
         :return: generator
         """
         logger.info("building image '%s' from git repo '%s' specified as URL '%s'",
-                image, git_path, url)
+                    image, git_path, url)
         logger.info("will copy Dockerfile to '%s'", copy_dockerfile_to)
         temp_dir = tempfile.mkdtemp()
         response = None
@@ -288,6 +306,7 @@ class DockerTasker(LastLogger):
         return response
 
     def run(self, image, command=None, create_kwargs=None, start_kwargs=None):
+        # type: (ImageName, str, str, Dict[str, Any], Dict[str, Any]) -> str
         """
         create container from provided image and start it
 
@@ -315,6 +334,7 @@ class DockerTasker(LastLogger):
         return container_id
 
     def commit_container(self, container_id, image=None, message=None):
+        # type: (str, ImageName, str) -> str
         """
         create image from provided container
 
@@ -339,6 +359,7 @@ class DockerTasker(LastLogger):
             raise RuntimeError("ID missing from commit response")
 
     def get_image_info_by_image_id(self, image_id):
+        # type: (str) -> str
         """
         using `docker images`, provide information about an image
 
@@ -364,6 +385,7 @@ class DockerTasker(LastLogger):
             return image_dict
 
     def get_image_info_by_image_name(self, image, exact_tag=True):
+        # type: (ImageName, bool) -> List[Dict[str, Any]]
         """
         using `docker images`, provide information about an image
 
@@ -395,6 +417,7 @@ class DockerTasker(LastLogger):
         return images
 
     def pull_image(self, image, insecure=False):
+        # type: (ImageName, bool) -> str
         """
         pull provided image from registry
 
@@ -414,6 +437,7 @@ class DockerTasker(LastLogger):
         return image.to_str()
 
     def tag_image(self, image, target_image, force=False):
+        # type: (ImageName, ImageName, bool) -> str
         """
         tag provided image with specified image_name, registry and tag
 
@@ -442,6 +466,7 @@ class DockerTasker(LastLogger):
         return target_image.to_str()  # this will be the proper name, not just repo/img
 
     def login(self, registry, docker_secret_path):
+        # type: (str, str) -> None
         """
         login to docker registry
 
@@ -467,6 +492,7 @@ class DockerTasker(LastLogger):
                 logger.debug("response: %r", response)
 
     def push_image(self, image, insecure=False):
+        # type: (ImageName, bool) -> List[str]
         """
         push provided image to registry
 
@@ -490,6 +516,7 @@ class DockerTasker(LastLogger):
         return command_result.parsed_logs
 
     def tag_and_push_image(self, image, target_image, insecure=False, force=False, dockercfg=None):
+        # type: (ImageName, ImageName, bool, bool, str) -> List[str]
         """
         tag provided image and push it to registry
 
@@ -508,6 +535,7 @@ class DockerTasker(LastLogger):
         return self.push_image(target_image, insecure=insecure)
 
     def inspect_image(self, image_id):
+        # type: (ImageName) -> Dict[str, Any]
         """
         return detailed metadata about provided image (see 'man docker-inspect')
 
@@ -522,6 +550,7 @@ class DockerTasker(LastLogger):
         return image_metadata
 
     def remove_image(self, image_id, force=False, noprune=False):
+        # type: (ImageName, bool, bool) -> None
         """
         remove provided image from filesystem
 
@@ -537,6 +566,7 @@ class DockerTasker(LastLogger):
         self.d.remove_image(image_id, force=force, noprune=noprune)  # returns None
 
     def remove_container(self, container_id, force=False):
+        # type: (str, bool) -> None
         """
         remove provided container from filesystem
 
@@ -549,6 +579,8 @@ class DockerTasker(LastLogger):
         self.d.remove_container(container_id, force=force)  # returns None
 
     def logs(self, container_id, stderr=True, stream=True):
+        # TODO: its probably a bad idea to return different types
+        # type: (str, bool, bool) -> Any
         """
         acquire output (stdout, stderr) from provided container
 
@@ -567,6 +599,7 @@ class DockerTasker(LastLogger):
         return response
 
     def wait(self, container_id):
+        # type: (str, int) -> int
         """
         wait for container to finish the job (may run infinitely)
 
@@ -580,6 +613,7 @@ class DockerTasker(LastLogger):
         return response
 
     def image_exists(self, image_id):
+        # type: (ImageName) -> bool
         """
         does provided image exists?
 
@@ -599,6 +633,7 @@ class DockerTasker(LastLogger):
         return response
 
     def get_info(self):
+        # type: () -> Dict[str, Any]
         """
         get info about used docker environment
 
@@ -607,6 +642,7 @@ class DockerTasker(LastLogger):
         return self.d.info()
 
     def get_version(self):
+        # type: () -> Dict[str, Any]
         """
         get version of used docker environment
 

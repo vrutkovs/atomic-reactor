@@ -25,7 +25,8 @@ from atomic_reactor.constants import DOCKERFILE_FILENAME, TOOLS_USED
 try:
     from importlib import import_module
 except ImportError:
-    import_module = __import__  # I love python 2.6
+    # I love python 2.6 
+    import_module = __import__  # type: ignore
 
 
 logger = logging.getLogger(__name__)
@@ -232,7 +233,7 @@ def backported_check_output(*popenargs, **kwargs):
         cmd = kwargs.get("args")
         if cmd is None:
             cmd = popenargs[0]
-        error = subprocess.CalledProcessError(retcode, cmd)
+        error = subprocess.CalledProcessError(retcode, cmd) # type: ignore
         error.output = output
         raise error
     return output

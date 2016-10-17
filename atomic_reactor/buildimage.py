@@ -34,6 +34,7 @@ DOCKERFILE_REACTOR_TARBALL_NAME = "atomic-reactor.tar.gz"
 class BuildImageBuilder(object):
     def __init__(self, reactor_tarball_path=None, reactor_local_path=None,
                  reactor_remote_path=None, use_official_reactor_git=False):
+        # type: (str, str, str, bool) -> None
         self.tasker = DockerTasker()
         self.reactor_tarball_path = reactor_tarball_path
         self.reactor_local_path = reactor_local_path
@@ -48,6 +49,7 @@ class BuildImageBuilder(object):
                                "path to atomic_reactor tarball, or use upstream git repo.")
 
     def create_image(self, df_dir_path, image, use_cache=False):
+        # type: (str, str, str, bool) -> None
         """
         create image: get atomic-reactor sdist tarball, build image and tag it
 
@@ -61,8 +63,8 @@ class BuildImageBuilder(object):
             raise RuntimeError("Directory '%s' does not exist.", df_dir_path)
 
         tmpdir = tempfile.mkdtemp()
-        df_tmpdir = os.path.join(tmpdir, 'df-%s' % uuid.uuid4())
-        git_tmpdir = os.path.join(tmpdir, 'git-%s' % uuid.uuid4())
+        df_tmpdir = os.path.join(str(tmpdir), 'df-%s' % uuid.uuid4())
+        git_tmpdir = os.path.join(str(tmpdir), 'git-%s' % uuid.uuid4())
         os.mkdir(df_tmpdir)
         logger.debug("tmp dir with dockerfile '%s' created", df_tmpdir)
         os.mkdir(git_tmpdir)
@@ -77,12 +79,14 @@ class BuildImageBuilder(object):
             shutil.copy(reactor_tarball, reactor_tb_path)
 
             image_name = ImageName.parse(image)
-            logs_gen = self.tasker.build_image_from_path(df_tmpdir, image_name, stream=True, use_cache=use_cache)
+            logs_gen = self.tasker.build_image_from_path(
+                df_tmpdir, image_name, stream=True, use_cache=use_cache)
             wait_for_command(logs_gen)
         finally:
-            shutil.rmtree(tmpdir)
+            shutil.rmtree(str(tmpdir))
 
     def get_reactor_tarball_path(self, tmpdir):
+        # type: (str) -> str
         """
         generate atomic-reactor tarball
         :return:

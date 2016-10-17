@@ -44,7 +44,7 @@ class Plugin(object):
     # unique plugin identification
     # output of this plugin can be found in results specified with this key,
     # same thing goes for input: use this key for providing input for this plugin
-    key = None
+    key = None # type: str
     # by default, if plugin fails (raises exc), execution continues
     is_allowed_to_fail = True
 

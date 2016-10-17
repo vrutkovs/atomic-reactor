@@ -3,3 +3,4 @@
 pytest-cov
 pyflakes
 pep8
+mypy

@@ -18,6 +18,7 @@ start_time = time.time()
 
 
 def set_logging(name="atomic_reactor", level=logging.DEBUG, handler=None):
+    # type: (str, int, logging.Handler) -> None
     # create logger
     logger = logging.getLogger(name)
     logger.handlers = []

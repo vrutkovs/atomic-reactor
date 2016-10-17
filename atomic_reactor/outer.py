@@ -19,6 +19,12 @@ from atomic_reactor.core import DockerTasker, BuildContainerFactory
 from atomic_reactor.inner import BuildResults
 from atomic_reactor.util import wait_for_command, ImageName
 
+# this import is required for mypy to work correctly
+try:
+    from typing import Any
+    import types
+except:
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -28,19 +34,21 @@ class BuildManager(BuilderStateMachine):
     initiates build and waits for it to finish, then it collects data
     """
     def __init__(self, build_image, build_args):
+        # type: (str, Dict[str, Any]) -> None
         BuilderStateMachine.__init__(self)
         self.build_image = build_image
         self.build_args = build_args
         self.image = build_args['image']
         self.uri = build_args['source']['uri']
 
-        self.temp_dir = None
+        self.temp_dir = None  # type: str
         # build image after build
-        self.buildroot_image_id = None
-        self.buildroot_image_name = None
+        self.buildroot_image_id = None  # type: str
+        self.buildroot_image_name = None  # type: ImageName
         self.dt = DockerTasker()
 
     def _build(self, build_method):
+        # type: (types.FunctionType) -> BuildResults
         """
         build image from provided build_args
 
@@ -48,7 +56,7 @@ class BuildManager(BuilderStateMachine):
         """
         logger.info("building image '%s'", self.image)
         self._ensure_not_built()
-        self.temp_dir = tempfile.mkdtemp()
+        self.temp_dir = str(tempfile.mkdtemp())
         temp_path = os.path.join(self.temp_dir, BUILD_JSON)
         try:
             with open(temp_path, 'w') as build_json:
@@ -72,6 +80,7 @@ class BuildManager(BuilderStateMachine):
             shutil.rmtree(self.temp_dir)
 
     def _load_results(self, container_id):
+        # type: (str) -> BuildResults
         """
         load results from recent build
 
@@ -97,6 +106,7 @@ class BuildManager(BuilderStateMachine):
             return results
 
     def commit_buildroot(self):
+        # type: () -> str
         """
         create image from buildroot
 
@@ -110,10 +120,12 @@ class BuildManager(BuilderStateMachine):
             repo="buildroot-%s" % self.image,
             # save the time when image was built
             tag=datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S'))
-        self.buildroot_image_id = self.dt.commit_container(self.build_container_id, commit_message)
+        self.buildroot_image_id = self.dt.commit_container(
+            self.build_container_id, message=commit_message)
         return self.buildroot_image_id
 
     def push_buildroot(self, registry):
+        # type: (str) -> List[str]
         logger.info("pushing buildroot to registry")
         self._ensure_is_built()
 

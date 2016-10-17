@@ -19,12 +19,19 @@ from atomic_reactor.constants import DEFAULT_DOWNLOAD_BLOCK_SIZE
 
 logger = logging.getLogger(__name__)
 
+# this import is required for mypy to work correctly
+try:
+    from typing import Any, Iterable
+except:
+    pass
+
 
 def koji_login(session,
                proxyuser=None,
                ssl_certs_dir=None,
                krb_principal=None,
                krb_keytab=None):
+    # type: (koji.ClientSession, str, str, str, str) -> Any
     """
     Choose the correct login method based on the available credentials,
     and call that method on the provided session object.
@@ -64,6 +71,7 @@ def koji_login(session,
 
 
 def create_koji_session(hub_url, auth_info=None):
+    # type: (str, Dict[str, Any]) -> koji.ClientSession
     """
     Creates and returns a Koji session. If auth_info
     is provided, the session will be authenticated.
@@ -82,11 +90,13 @@ def create_koji_session(hub_url, auth_info=None):
 
 class TaskWatcher(object):
     def __init__(self, session, task_id, poll_interval=5):
+        # type: (koji.ClientSession, str, int) -> None
         self.session = session
         self.task_id = task_id
         self.poll_interval = poll_interval
 
     def wait(self):
+        # type: () -> str
         logger.debug("waiting for koji task %r to finish", self.task_id)
         while not self.session.taskFinished(self.task_id):
             time.sleep(self.poll_interval)
@@ -97,11 +107,13 @@ class TaskWatcher(object):
         return self.state
 
     def failed(self):
+        # type: () -> bool
         return self.state in ['CANCELED', 'FAILED']
 
 
 def stream_task_output(session, task_id, file_name,
                        blocksize=DEFAULT_DOWNLOAD_BLOCK_SIZE):
+    # type: (koji.ClientSession, str, str, int) -> Iterable[str]
     """
     Generator to download file from task without loading the whole
     file into memory.

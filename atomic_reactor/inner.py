@@ -20,25 +20,33 @@ from atomic_reactor.plugin import PostBuildPluginsRunner, PreBuildPluginsRunner,
 from atomic_reactor.source import get_source_instance_for
 from atomic_reactor.util import ImageName
 
+# this import is required for mypy to work correctly
+try:
+    from typing import Any
+    from atomic_reactor.build import BuildResult
+except:
+    pass
+
 
 logger = logging.getLogger(__name__)
 
 
 class BuildResults(object):
-    build_logs = None
-    dockerfile = None
-    built_img_inspect = None
-    built_img_info = None
-    base_img_inspect = None
-    base_img_info = None
-    base_plugins_output = None
-    built_img_plugins_output = None
-    container_id = None
-    return_code = None
+    build_logs = None # type: List[str]
+    dockerfile = None # type: str
+    built_img_inspect = None # type: str
+    built_img_info = None # type: str
+    base_img_inspect = None # type: str
+    base_img_info = None # type: str
+    base_plugins_output = None # type: str
+    built_img_plugins_output = None # type: str
+    container_id = None # type: str
+    return_code = None # type: int
 
 
 class BuildResultsEncoder(json.JSONEncoder):
     def default(self, obj):
+        # type: (BuildResults) -> Dict[str, object]
         if isinstance(obj, BuildResults):
             return {
                 'build_logs': obj.build_logs,
@@ -70,13 +78,14 @@ class TagConf(object):
     """
 
     def __init__(self):
+        # type: () -> None
         # list of ImageNames with predictable names
-        self._primary_images = []
+        self._primary_images = []  # type: List[str]
         # list if ImageName instances with unpredictable names
-        self._unique_images = []
+        self._unique_images = []  # type: List[str]
 
     @property
-    def primary_images(self):
+    def primary_images(self):  # type: () -> List[str]
         """
         primary image names are predictable and should be used for layering
 
@@ -87,7 +96,7 @@ class TagConf(object):
         return self._primary_images
 
     @property
-    def images(self):
+    def images(self):  # type: () -> List[str]
         """
         list of all ImageNames
 
@@ -96,7 +105,7 @@ class TagConf(object):
         return self._primary_images + self._unique_images
 
     @property
-    def unique_images(self):
+    def unique_images(self):  # type: () -> List[str]
         """
         unique image names are unpredictable and should be used for tracking only
 
@@ -106,7 +115,7 @@ class TagConf(object):
         """
         return self._unique_images
 
-    def add_primary_image(self, image):
+    def add_primary_image(self, image):  # type: (str) -> None
         """
         add new primary image
 
@@ -117,7 +126,7 @@ class TagConf(object):
         """
         self._primary_images.append(ImageName.parse(image))
 
-    def add_unique_image(self, image):
+    def add_unique_image(self, image):  # type: (str) -> None
         """
         add image with unpredictable name
 
@@ -128,7 +137,7 @@ class TagConf(object):
         """
         self._unique_images.append(ImageName.parse(image))
 
-    def add_primary_images(self, images):
+    def add_primary_images(self, images):  # type: (str) -> None
         """
         add new primary images in bulk
 
@@ -142,7 +151,7 @@ class TagConf(object):
 
 
 class Registry(object):
-    def __init__(self, uri, insecure=False):
+    def __init__(self, uri, insecure=False):  # type: (str, bool) -> None
         """
         abstraction for all registry classes
 
@@ -155,29 +164,32 @@ class Registry(object):
 
 class PulpRegistry(Registry):
     """ pulp & crane """
-    def __init__(self, name, crane_uri, insecure=False):
+    def __init__(self, name, crane_uri, insecure=False):  # type: (str, str, bool) -> None
         """
         :param name: str, pulp's rest api is specified in dockpulp's config, we refer only by name
         :param crane_uri: str, read-only docker registry api access point
         :param insecure: bool
         """
         super(PulpRegistry, self).__init__(crane_uri, insecure=insecure)
-        self.name = name
+        self.name = name  # type: str
 
 
 class DockerRegistry(Registry):
     """ v1/v2 docker registry """
-    def __init__(self, uri, insecure=False):
+    def __init__(self, uri, insecure=False):  # type: (str, bool) -> None
         """
         :param uri: str, uri for pushing/pulling
         :param insecure: bool
         """
         super(DockerRegistry, self).__init__(uri, insecure=insecure)
-        self.digests = {}  # maps tags (str) to their digest, if available
-        self.config = None  # stores image config from the registry, 
+        # maps tags (str) to their digest, if available
+        self.digests = {}  # type: Dict[str, str]
+        # stores image config from the registry
+        self.config = None  # type: Dict[str, Any]
         # media type of the config is application/vnd.docker.container.image.v1+json
 
 
+# TODO: annotate this, as currently it throws all kinds of errors in mypy
 class PushConf(object):
     """
     configuration of remote registries: docker-registry or pulp
@@ -193,6 +205,7 @@ class PushConf(object):
         if registry_uri is None:
             raise RuntimeError("registry URI cannot be None")
         r = DockerRegistry(registry_uri, insecure=insecure)
+        # mypy throws 'error: "object" has no attribute "append"', don't know why
         self._registries["docker"].append(r)
         return r
 
@@ -213,14 +226,14 @@ class PushConf(object):
 
     @property
     def docker_registries(self):
-        return self._registries["docker"]
+        return self._registries["docker"]  # type: ignore
 
     @property
     def pulp_registries(self):
         return [registry for registry in self._registries["pulp"].values()]
 
     @property
-    def all_registries(self):
+    def all_registries(self):  # type: () -> List[object]
         return self.docker_registries + self.pulp_registries
 
 
@@ -239,6 +252,7 @@ class DockerBuildWorkflow(object):
     def __init__(self, source, image, prebuild_plugins=None, prepublish_plugins=None,
                  postbuild_plugins=None, exit_plugins=None, plugin_files=None,
                  openshift_build_selflink=None, **kwargs):
+        # type: (Dict[str, str], str, Dict[str, Any], Dict[str, Any], Dict[str, Any], Dict[str, Any], List[str], str, **Any) -> None
         """
         :param source: dict, where/how to get source code to put in image
         :param image: str, tag for built image ([registry/]image_name[:tag])
@@ -256,14 +270,14 @@ class DockerBuildWorkflow(object):
         self.prepublish_plugins_conf = prepublish_plugins
         self.postbuild_plugins_conf = postbuild_plugins
         self.exit_plugins_conf = exit_plugins
-        self.prebuild_results = {}
-        self.postbuild_results = {}
-        self.prepub_results = {}
-        self.exit_results = {}
-        self.plugin_workspace = {}
-        self.plugins_timestamps = {}
-        self.plugins_durations = {}
-        self.plugins_errors = {}
+        self.prebuild_results = {}  # type: Dict[str, Any]
+        self.postbuild_results = {}  # type: Dict[str, Any]
+        self.prepub_results = {}  # type: Dict[str, Any]
+        self.exit_results = {}  # type: Dict[str, Any]
+        self.plugin_workspace = {}  # type: Dict[str, Any]
+        self.plugins_timestamps = {}  # type: Dict[str, Any]
+        self.plugins_durations = {}  # type: Dict[str, Any]
+        self.plugins_errors = {}  # type: Dict[str, Any]
         self.autorebuild_canceled = False
         self.build_failed = False
         self.plugin_failed = False
@@ -271,12 +285,12 @@ class DockerBuildWorkflow(object):
 
         self.kwargs = kwargs
 
-        self.builder = None
-        self.build_logs = []
-        self.built_image_inspect = None
-        self._base_image_inspect = None
+        self.builder = None  # type: InsideBuilder
+        self.build_logs = []  # type: List[str]
+        self.built_image_inspect = None  # type: Dict[str, Any]
+        self._base_image_inspect = None  # type: Dict[str, Any]
 
-        self.pulled_base_images = set()
+        self.pulled_base_images = set()  # type: Set[str]
 
         # When an image is exported into tarball, it can then be processed by various plugins.
         #  Each plugin that transforms the image should save it as a new file and append it to
@@ -284,14 +298,14 @@ class DockerBuildWorkflow(object):
         #  member of this structure. Example:
         #  [{'path': '/tmp/foo.tar', 'size': 12345678, 'md5sum': '<md5>', 'sha256sum': '<sha256>'}]
         #  You can use util.get_exported_image_metadata to create a dict to append to this list.
-        self.exported_image_sequence = []
+        self.exported_image_sequence = []  # type: List[Dict[str, Any]]
 
         self.tag_conf = TagConf()
         self.push_conf = PushConf()
 
         # mapping of downloaded files; DON'T PUT ANYTHING BIG HERE!
         # "path/to/file" -> "content"
-        self.files = {}
+        self.files = {}  # type: Dict[str, Any]
 
         self.openshift_build_selflink = openshift_build_selflink
 
@@ -299,7 +313,7 @@ class DockerBuildWorkflow(object):
             logger.warning("unprocessed keyword arguments: %s", kwargs)
 
     @property
-    def build_process_failed(self):
+    def build_process_failed(self):  # type: () -> bool
         """
         Has any aspect of the build process failed?
         """
@@ -307,16 +321,16 @@ class DockerBuildWorkflow(object):
 
     # inspect base image lazily just before it's needed - pre plugins may change the base image
     @property
-    def base_image_inspect(self):
+    def base_image_inspect(self):  # type: () -> Dict[str, Any]
         if self._base_image_inspect is None:
             self._base_image_inspect = self.builder.tasker.inspect_image(self.builder.base_image)
         return self._base_image_inspect
 
-    def build_docker_image(self):
+    def build_docker_image(self):  # type: () -> BuildResult
         """
         build docker image
 
-        :return: BuildResults
+        :return: BuildResult
         """
         self.builder = InsideBuilder(self.source, self.image)
         try:
@@ -391,8 +405,8 @@ class DockerBuildWorkflow(object):
                 self.source.remove_tmpdir()
 
 
-
 def build_inside(input_method, input_args=None, substitutions=None):
+    # type: (str, List[str], List[str]) -> None
     """
     use requested input plugin to load configuration and then initiate build
     """

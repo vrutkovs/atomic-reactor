@@ -17,6 +17,16 @@ from dockerfile_parse import DockerfileParser
 from atomic_reactor.core import DockerTasker, LastLogger
 from atomic_reactor.util import wait_for_command, ImageName, print_version_of_tools
 
+# this import is required for mypy to work correctly
+try:
+    from typing import Any, Tuple
+except:
+    pass
+
+# imports required for annotations to be resolved
+from atomic_reactor.util import CommandResult
+from atomic_reactor.source import Source
+
 logger = logging.getLogger(__name__)
 
 
@@ -30,25 +40,20 @@ class ImageNotBuilt(Exception):
 
 class BuilderStateMachine(object):
     def __init__(self):
-        self.is_built = False
-        self.image = None
+        # type: () -> None
+        self.is_built = False  # type: bool
+        self.image = None  # type: str
 
     def _ensure_is_built(self):
-        """
-        ensure that image is already built
-
-        :return: None
-        """
+        # type: () -> None
+        """ ensure that image is already built """
         if not self.is_built:
             logger.error("image '%s' is not built yet!", self.image)
             raise ImageNotBuilt()
 
     def _ensure_not_built(self):
-        """
-        verify that image wasn't built with 'build' method yet
-
-        :return: None
-        """
+        # type: () -> None
+        """ verify that image wasn't built with 'build' method yet """
         if self.is_built:
             logger.error("image '%s' is already built!", self.image)
             raise ImageAlreadyBuilt()
@@ -56,35 +61,43 @@ class BuilderStateMachine(object):
 
 class BuildResult(object):
     def __init__(self, command_result, image_id=None):
+        # type: (CommandResult, str) -> None
         """ when build fails, image_id is None """
         self.command_result = command_result
         self._image_id = image_id
 
     @property
     def image_id(self):
+        # type: () -> str
         return self._image_id
 
     def is_failed(self):
+        # type: () -> bool
         return self.command_result.is_failed()
 
     @property
     def logs(self):
+        # type: () -> List[str]
         return self.command_result.logs
 
 
 class ExceptionBuildResult(object):
     def __init__(self):
+        # type: () -> None
         self._logs = traceback.format_exc()
 
     @property
     def image_id(self):
+        # type: () -> None
         return None
 
     def is_failed(self):
+        # type: () -> bool
         return True
 
     @property
     def logs(self):
+        # type: () -> str
         return self._logs
 
 
@@ -94,6 +107,7 @@ class InsideBuilder(LastLogger, BuilderStateMachine):
     """
 
     def __init__(self, source, image, **kwargs):
+        # type: (Source, ImageName, **Any) -> None
         """
         """
         LastLogger.__init__(self)
@@ -108,20 +122,23 @@ class InsideBuilder(LastLogger, BuilderStateMachine):
         logger.info(json.dumps(version, indent=2))
 
         # arguments for build
-        self.source = source
-        self.base_image_id = None
-        self.image_id = None
-        self.built_image_info = None
-        self.image = ImageName.parse(image)
+        self.source = source  # type: Source
+        # TODO: Is it still being used?
+        self.base_image_id = None  # type: str
+        self.image_id = None  # type: str
+        self.built_image_info = None  # type: Dict[str, Any]
+        self.image = ImageName.parse(image)  # type: str
 
         # get info about base image from dockerfile
-        self.df_path, self.df_dir = self.source.get_dockerfile_path()
+        self.df_path, self.df_dir = self.source.get_dockerfile_path()  # type: Tuple[str, str]
         self.set_base_image(DockerfileParser(self.df_path).baseimage)
         logger.debug("base image specified in dockerfile = '%s'", self.base_image)
         if not self.base_image.tag:
             self.base_image.tag = 'latest'
 
     def build(self):
+        # TODO: we should rework this to return one type 
+        # type: () -> Any
         """
         build image inside current environment;
         it's expected this may run within (privileged) docker container
@@ -151,9 +168,11 @@ class InsideBuilder(LastLogger, BuilderStateMachine):
             return ExceptionBuildResult()
 
     def set_base_image(self, base_image):
+        # type: (str) -> None
         self.base_image = ImageName.parse(base_image)
 
     def inspect_base_image(self):
+        # type: () -> Dict[str, Any]
         """
         inspect base image
 
@@ -164,6 +183,7 @@ class InsideBuilder(LastLogger, BuilderStateMachine):
         return inspect_data
 
     def inspect_built_image(self):
+        # type: () -> Dict[str, Any]
         """
         inspect built image
 
@@ -171,10 +191,11 @@ class InsideBuilder(LastLogger, BuilderStateMachine):
         """
         logger.info("inspecting built image '%s'", self.image_id)
         self._ensure_is_built()
-        inspect_data = self.tasker.inspect_image(self.image_id)  # dict with lots of data, see man docker-inspect
+        inspect_data = self.tasker.inspect_image(image)  # dict with lots of data, see man docker-inspect
         return inspect_data
 
     def get_base_image_info(self):
+        # type: () -> Dict[str, Any]
         """
         query docker about base image
 
@@ -193,6 +214,7 @@ class InsideBuilder(LastLogger, BuilderStateMachine):
             raise RuntimeError("multiple (%d) images found for image '%s'" % (items_count, self.base_image))
 
     def get_built_image_info(self):
+        # type: () -> Dict[str, Any]
         """
         query docker about built image
 
@@ -200,7 +222,7 @@ class InsideBuilder(LastLogger, BuilderStateMachine):
         """
         logger.info("getting information about built image '%s'", self.image)
         self._ensure_is_built()
-        image_info = self.tasker.get_image_info_by_image_name(self.image)
+        image_info = self.tasker.get_image_info_by_image_name(image)
         items_count = len(image_info)
         if items_count == 1:
             return image_info[0]

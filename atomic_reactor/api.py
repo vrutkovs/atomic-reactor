@@ -20,9 +20,19 @@ __all__ = (
     'build_image_here',
 )
 
+# this import is required for mypy to work correctly
+try:
+    from typing import Any
+    from atomic_reactor.build import BuildResult
+except:
+    pass
+
+
 def _prepare_build_json(image, source, parent_registry, target_registries,
                         parent_registry_insecure, target_registries_insecure,
                         dont_pull_base_image, **kwargs):
+    # TODO: set correct type for kwargs
+    # type: (str, Dict[str, str], str, List[str], str, str, bool, **Any) -> Dict[str, Any]
 
     target_registries = target_registries or []
     registries = dict([(registry, {"insecure": target_registries_insecure})
@@ -52,10 +62,12 @@ def _prepare_build_json(image, source, parent_registry, target_registries,
     return build_json
 
 
-def build_image_in_privileged_container(build_image, source, image,
+def build_image_in_privileged_container(
+        build_image, source, image,
         parent_registry=None, target_registries=None, push_buildroot_to=None,
         parent_registry_insecure=False, target_registries_insecure=False,
         dont_pull_base_image=False, **kwargs):
+    # type: (str, Dict[str, str], str, str, List[str], str, bool, bool, bool, **Any) -> BuildResult
     """
     build image from provided dockerfile (specified by `source`) in privileged container by
     running another docker instance inside the container
@@ -70,7 +82,7 @@ def build_image_in_privileged_container(build_image, source, image,
     :param target_registries_insecure: bool, allow connecting to target registries over plain http
     :param dont_pull_base_image: bool, don't pull or update base image specified in dockerfile
 
-    :return: BuildResults
+    :return: BuildResult
     """
     build_json = _prepare_build_json(image, source, parent_registry, target_registries,
                                      parent_registry_insecure, target_registries_insecure,
@@ -87,6 +99,7 @@ def build_image_using_hosts_docker(build_image, source, image,
         parent_registry=None, target_registries=None, push_buildroot_to=None,
         parent_registry_insecure=False, target_registries_insecure=False,
         dont_pull_base_image=False, **kwargs):
+    # type: (str, Dict[str, str], str, str, List[str], str, bool, bool, bool, **Any) -> BuildResult
     """
     build image from provided dockerfile (specified by `source`) in privileged container
     using docker from host
@@ -101,7 +114,7 @@ def build_image_using_hosts_docker(build_image, source, image,
     :param target_registries_insecure: bool, allow connecting to target registries over plain http
     :param dont_pull_base_image: bool, don't pull or update base image specified in dockerfile
 
-    :return: BuildResults
+    :return: BuildResult
     """
     build_json = _prepare_build_json(image, source, parent_registry, target_registries,
                                      parent_registry_insecure, target_registries_insecure,
@@ -117,6 +130,7 @@ def build_image_using_hosts_docker(build_image, source, image,
 def build_image_here(source, image,
         parent_registry=None, target_registries=None, parent_registry_insecure=False,
         target_registries_insecure=False, dont_pull_base_image=False, **kwargs):
+    # type: (Dict[str, str], str, str, List[str], bool, bool, bool, **Any) -> BuildResult
     """
     build image from provided dockerfile (specified by `source`) in current environment
 
