@@ -132,9 +132,8 @@ class BuildManager(BuilderStateMachine):
         image_name_with_registry = self.buildroot_image_name.copy()
         image_name_with_registry.registry = registry
 
-        return self.dt.tag_and_push_image(
-            self.buildroot_image_id,
-            image_name_with_registry)
+        image_name = ImageName.parse(self.buildroot_image_id)
+        return self.dt.tag_and_push_image(image_name, image_name_with_registry)
 
 
 class PrivilegedBuildManager(BuildManager):

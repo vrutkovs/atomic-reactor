@@ -19,7 +19,7 @@ from atomic_reactor.util import wait_for_command, ImageName, print_version_of_to
 
 # this import is required for mypy to work correctly
 try:
-    from typing import Any, Tuple
+    from typing import Any, Tuple, Union
 except:
     pass
 
@@ -107,7 +107,7 @@ class InsideBuilder(LastLogger, BuilderStateMachine):
     """
 
     def __init__(self, source, image, **kwargs):
-        # type: (Source, ImageName, **Any) -> None
+        # type: (Source, Union[ImageName, str], **Any) -> None
         """
         """
         LastLogger.__init__(self)
@@ -191,7 +191,7 @@ class InsideBuilder(LastLogger, BuilderStateMachine):
         """
         logger.info("inspecting built image '%s'", self.image_id)
         self._ensure_is_built()
-        inspect_data = self.tasker.inspect_image(image)  # dict with lots of data, see man docker-inspect
+        inspect_data = self.tasker.inspect_image(self.image)  # dict with lots of data, see man docker-inspect
         return inspect_data
 
     def get_base_image_info(self):
@@ -222,6 +222,7 @@ class InsideBuilder(LastLogger, BuilderStateMachine):
         """
         logger.info("getting information about built image '%s'", self.image)
         self._ensure_is_built()
+        image = ImageName.parse(self.image)
         image_info = self.tasker.get_image_info_by_image_name(image)
         items_count = len(image_info)
         if items_count == 1:

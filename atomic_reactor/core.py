@@ -40,7 +40,7 @@ from atomic_reactor.util import (
 
 # this import is required for mypy to work correctly
 try:
-    from typing import Any
+    from typing import Any, Union
 except:
     pass
 
@@ -90,7 +90,7 @@ class BuildContainerFactory(object):
             logger.error("unable to open json arguments: %r", ex)
             raise RuntimeError("Unable to open json arguments: %r" % ex)
 
-        if not self.tasker.image_exists(image_class):
+        if not self.tasker.image_exists(image):
             logger.error("provided build image doesn't exist: '%s'", image)
             raise RuntimeError("Provided build image doesn't exist: '%s'" % image)
 
@@ -535,7 +535,7 @@ class DockerTasker(LastLogger):
         return self.push_image(target_image, insecure=insecure)
 
     def inspect_image(self, image_id):
-        # type: (ImageName) -> Dict[str, Any]
+        # type: (Union[str, ImageName]) -> Dict[str, Any]
         """
         return detailed metadata about provided image (see 'man docker-inspect')
 
@@ -613,7 +613,7 @@ class DockerTasker(LastLogger):
         return response
 
     def image_exists(self, image_id):
-        # type: (ImageName) -> bool
+        # type: (Union[str, ImageName]) -> bool
         """
         does provided image exists?
 
