@@ -149,11 +149,3 @@ def build_image_here(source, image,
                                      dont_pull_base_image, **kwargs)
     m = DockerBuildWorkflow(**build_json)
     return m.build_docker_image()
-
-
-def list_dockerfiles_in_git():
-    """
-    clone provided repo and return all dockerfiles found in the repo
-
-    :return:
-    """
