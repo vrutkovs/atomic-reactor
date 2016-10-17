@@ -169,7 +169,7 @@ class InsideBuilder(LastLogger, BuilderStateMachine):
 
     def set_base_image(self, base_image):
         # type: (str) -> None
-        self.base_image = ImageName.parse(base_image)
+        self.base_image = ImageName.parse(base_image)  # type: ImageName
 
     def inspect_base_image(self):
         # type: () -> Dict[str, Any]

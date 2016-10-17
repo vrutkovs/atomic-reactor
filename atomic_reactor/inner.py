@@ -280,7 +280,7 @@ class DockerBuildWorkflow(object):
         self.plugins_errors = {}  # type: Dict[str, Any]
         self.autorebuild_canceled = False
         self.build_failed = False
-        self.plugin_failed = False
+        self.plugin_failed = False  # type: bool
         self.plugin_files = plugin_files
 
         self.kwargs = kwargs

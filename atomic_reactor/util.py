@@ -28,12 +28,19 @@ except ImportError:
     # I love python 2.6 
     import_module = __import__  # type: ignore
 
+# this import is required for mypy to work correctly
+try:
+    from typing import Any, Union, Tuple
+except:
+    pass
+
 
 logger = logging.getLogger(__name__)
 
 
 class ImageName(object):
     def __init__(self, registry=None, namespace=None, repo=None, tag=None):
+        # type: (str, str, str, str) -> None
         self.registry = registry
         self.namespace = namespace
         self.repo = repo
@@ -41,6 +48,7 @@ class ImageName(object):
 
     @classmethod
     def parse(cls, image_name):
+        # TODO: annotate (Union[ImageName, str]) -> ImageName
         result = cls()
 
         # registry.org/namespace/repo:tag
@@ -65,53 +73,63 @@ class ImageName(object):
 
     def to_str(self, registry=True, tag=True, explicit_tag=False,
                explicit_namespace=False):
+        # type: (bool, bool, bool, bool) -> str
         if self.repo is None:
             raise RuntimeError('No image repository specified')
 
         result = self.repo
 
         if tag and self.tag:
-            result = '{0}:{1}'.format(result, self.tag)
+            result = str('{0}:{1}'.format(result, self.tag))
         elif tag and explicit_tag:
-            result = '{0}:{1}'.format(result, 'latest')
+            result = str('{0}:{1}'.format(result, 'latest'))
 
         if self.namespace:
-            result = '{0}/{1}'.format(self.namespace, result)
+            result = str('{0}/{1}'.format(self.namespace, result))
         elif explicit_namespace:
-            result = '{0}/{1}'.format('library', result)
+            result = str('{0}/{1}'.format('library', result))
 
         if registry and self.registry:
-            result = '{0}/{1}'.format(self.registry, result)
+            result = str('{0}/{1}'.format(self.registry, result))
 
         return result
 
     @property
     def pulp_repo(self):
-        return self.to_str(registry=False, tag=False).replace("/", "-")
+        # type: () -> str
+        return str(self.to_str(registry=False, tag=False).replace("/", "-"))
 
     def __str__(self):
+        # type: () -> str
         return self.to_str(registry=True, tag=True)
 
     def __repr__(self):
-        return "ImageName(image=%r)" % self.to_str()
+        # type: () -> str
+        return str("ImageName(image=%r)" % self.to_str())
 
     def __eq__(self, other):
-        return type(self) == type(other) and self.__dict__ == other.__dict__
+        # type: (Any) -> bool
+        return type(self) == type(other) and self.__dict__ == other.__dict__  #type: ignore
 
     def __ne__(self, other):
+        # type: (Any) -> bool
         return not self == other
 
     def __hash__(self):
+        # type: () -> int
         return hash(self.to_str())
 
     def copy(self):
+        # type: () -> ImageName
         return ImageName(
             registry=self.registry,
             namespace=self.namespace,
             repo=self.repo,
             tag=self.tag)
 
+
 def figure_out_dockerfile(absolute_path, local_path=None):
+    # type: (str, str) -> Tuple[str, str]
     """
     try to figure out dockerfile from provided path and optionally from relative local path
     this is meant to be used with git repo: absolute_path is path to git repo,
@@ -121,8 +139,8 @@ def figure_out_dockerfile(absolute_path, local_path=None):
     :param local_path:
     :return: tuple, (dockerfile_path, dir_with_dockerfile_path)
     """
-    logger.info("searching for dockerfile in '%s' (local path %s)", absolute_path, local_path)
-    logger.debug("abs path = '%s', local path = '%s'", absolute_path, local_path)
+    logger.info("searching for dockerfile in '%s' (local path %s)", (absolute_path), local_path)  # type: ignore
+    logger.debug("abs path = '%s', local path = '%s'", absolute_path, local_path)  # type: ignore
     if local_path:
         if local_path.endswith(DOCKERFILE_FILENAME):
             git_df_dir = os.path.dirname(local_path)
@@ -136,18 +154,20 @@ def figure_out_dockerfile(absolute_path, local_path=None):
     df_path = os.path.join(df_dir, DOCKERFILE_FILENAME)
     if not os.path.isfile(df_path):
         raise IOError("Dockerfile '%s' doesn't exist." % df_path)
-    logger.debug("Dockerfile found: '%s'", df_path)
+    logger.debug("Dockerfile found: '%s'", df_path)  # type: ignore
     return df_path, df_dir
 
 
 class CommandResult(object):
     def __init__(self):
-        self._logs = []
-        self._parsed_logs = []
-        self._error = None
-        self._error_detail = None
+        # type: () -> None
+        self._logs = []  # type: List[str]
+        self._parsed_logs = []  # type: List[str]
+        self._error = None  # type: str
+        self._error_detail = None  # type: str
 
     def parse_item(self, item):
+        # type: (unicode) -> None
         """
         :param item: str, json-encoded string
         """
@@ -177,25 +197,30 @@ class CommandResult(object):
             self._error = parsed_item.get("error", None)
             self._error_detail = parsed_item.get("errorDetail", None)
             if self._error:
-                logger.error(item.strip())
+                logger.error(item.strip())  # type: ignore
 
     @property
     def parsed_logs(self):
+        # type: () -> List[str]
         return self._parsed_logs
 
     @property
     def logs(self):
+        # type: () -> List[str]
         return self._logs
 
     @property
     def error(self):
+        # type: () -> str
         return self._error
 
     @property
     def error_detail(self):
+        # type: () -> str
         return self._error_detail
 
     def is_failed(self):
+        # type: () -> bool
         return bool(self.error) or bool(self.error_detail)
 
 
@@ -206,7 +231,7 @@ def wait_for_command(logs_generator):
 
     :return: list of str, logs
     """
-    logger.info("wait_for_command")
+    logger.info("wait_for_command")  # type: ignore
     cr = CommandResult()
     while True:
         try:
@@ -219,6 +244,7 @@ def wait_for_command(logs_generator):
 
 
 def backported_check_output(*popenargs, **kwargs):
+    # type: (*Any, **Any) -> str
     """
     Run command with arguments and return its output as a byte string.
 
@@ -226,11 +252,11 @@ def backported_check_output(*popenargs, **kwargs):
 
     https://gist.github.com/edufelipe/1027906
     """
-    process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)
+    process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)  # type: ignore
     output, _ = process.communicate()
     retcode = process.poll()
     if retcode:
-        cmd = kwargs.get("args")
+        cmd = kwargs.get("args")  # type: ignore
         if cmd is None:
             cmd = popenargs[0]
         error = subprocess.CalledProcessError(retcode, cmd) # type: ignore
@@ -240,6 +266,7 @@ def backported_check_output(*popenargs, **kwargs):
 
 
 def clone_git_repo(git_url, target_dir, commit=None):
+    # TODO: annotate this
     """
     clone provided git repo to target_dir, optionally checkout provided commit
 
@@ -299,24 +326,28 @@ class LazyGit(object):
         lazy_git.git_path
     """
     def __init__(self, git_url, commit=None, tmpdir=None):
+        # type: (str, str, str) -> None
         self.git_url = git_url
         # provided commit ID/reference to check out
         self.commit = commit
         # commit ID of HEAD; we'll figure this out ourselves
-        self._commit_id = None
+        self._commit_id = None  # type: str
         self.provided_tmpdir = tmpdir
-        self._git_path = None
+        self._git_path = None  # type: str
 
     @property
     def _tmpdir(self):
+        # type: () -> str
         return self.provided_tmpdir or self.our_tmpdir
 
     @property
     def commit_id(self):
+        # type: () -> str
         return self._commit_id
 
     @property
     def git_path(self):
+        # type: () -> str
         if self._git_path is None:
             self._commit_id = clone_git_repo(self.git_url, self._tmpdir, self.commit)
             self._git_path = self._tmpdir
@@ -333,10 +364,11 @@ class LazyGit(object):
 
 
 def escape_dollar(v):
+    # type: (str) -> str
     try:
         str_type = unicode
     except NameError:
-        str_type = str
+        str_type = str  # type: ignore
     if isinstance(v, str_type):
         return v.replace('$', r'\$')
     else:

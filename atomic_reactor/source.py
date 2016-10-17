@@ -19,6 +19,11 @@ import collections
 from atomic_reactor import util
 from atomic_reactor.constants import SOURCE_DIRECTORY_NAME
 
+# this import is required for mypy to work correctly
+try:
+    from typing import Any, Union, Tuple
+except:
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -30,42 +35,50 @@ VcsInfo = collections.namedtuple('VcsInfo', ['vcs_type', 'vcs_url', 'vcs_ref'])
 
 class Source(object):
     def __init__(self, provider, uri, dockerfile_path=None, provider_params=None, tmpdir=None):
+        # type: (str, str, str, Dict[str, str], str) -> None
         self.provider = provider
         self.uri = uri
         self.dockerfile_path = dockerfile_path
         self.provider_params = provider_params or {}
         # TODO: do we want to delete tmpdir when destroying the object?
-        self.tmpdir = tmpdir or tempfile.mkdtemp()
+        self.tmpdir = tmpdir or str(tempfile.mkdtemp())
         logger.debug("workdir is %r", self.tmpdir)
         self.source_path = os.path.join(self.tmpdir, SOURCE_DIRECTORY_NAME)
         logger.debug("source path is %r", self.source_path)
 
     @property
     def path(self):
+        # type: () -> str
         return self.get()
 
     @property
     def workdir(self):
+        # type: () -> str
         return self.tmpdir
 
     def get(self):
+        # type: () -> Any
         """Run this to get source and save it to `tmpdir` or a newly created tmpdir."""
         raise NotImplementedError('Must override in subclasses!')
 
     def get_dockerfile_path(self):
+        # type: () -> Tuple[str, str]
         # TODO: will we need figure_out_dockerfile as a separate method?
         return util.figure_out_dockerfile(self.path, self.dockerfile_path)
 
     def remove_tmpdir(self):
+        # type: () -> None
         shutil.rmtree(self.tmpdir)
 
     def get_vcs_info(self):
+        # type: () -> VcsInfo
         """Returns VcsInfo namedtuple or None if not applicable."""
         return None
 
 
 class GitSource(Source):
     def __init__(self, provider, uri, dockerfile_path=None, provider_params=None, tmpdir=None):
+        # type: (str, str, str, Dict[str, str], str) -> None
         super(GitSource, self).__init__(provider, uri, dockerfile_path,
                 provider_params, tmpdir)
         self.git_commit = self.provider_params.get('git_commit', None)
@@ -73,12 +86,15 @@ class GitSource(Source):
 
     @property
     def commit_id(self):
+        # type: () -> str
         return self.lg.commit_id
 
     def get(self):
+        # type: () -> str
         return self.lg.git_path
 
     def get_vcs_info(self):
+        # type: () -> VcsInfo
         return VcsInfo(
             vcs_type='git',
             vcs_url=self.lg.git_url,
@@ -88,6 +104,7 @@ class GitSource(Source):
 
 class PathSource(Source):
     def __init__(self, provider, uri, dockerfile_path=None, provider_params=None, tmpdir=None):
+        # type: (str, str, str, Dict[str, str], str) -> None
         super(PathSource, self).__init__(provider, uri, dockerfile_path,
                 provider_params, tmpdir)
         # make sure we have canonical URI representation even if we got path without "file://"
@@ -97,6 +114,7 @@ class PathSource(Source):
         os.makedirs(self.source_path)
 
     def get(self):
+        # type: () -> str
         # work around the weird behaviour of copytree, which requires the top dir
         #  to *not* exist
         for f in os.listdir(self.schemeless_path):
@@ -114,8 +132,9 @@ class PathSource(Source):
 
 
 def get_source_instance_for(source, tmpdir=None):
+    # type: (Dict[str, Any], basestring) -> Any
     validate_source_dict_schema(source)
-    klass = None
+    klass = None  # type: Any
     provider = source['provider'].lower()
     if provider == 'git':
         klass = GitSource
@@ -131,6 +150,7 @@ def get_source_instance_for(source, tmpdir=None):
 
 
 def validate_source_dict_schema(sd):
+    # type: (Dict[str, Any]) -> None
     if not isinstance(sd, dict):
         raise ValueError('"source" must be a dict')
     for k in ['provider', 'uri']:

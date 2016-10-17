@@ -349,8 +349,8 @@ class DockerTasker(LastLogger):
         tag = None
         if image:
             tag = image.tag
-            image = image.to_str(tag=False)
-        response = self.d.commit(container_id, repository=image, tag=tag, message=message)
+            image_str = image.to_str(tag=False)  # type: str
+        response = self.d.commit(container_id, repository=image_str, tag=tag, message=message)
         logger.debug("response = '%s'", response)
         try:
             return response['Id']
@@ -459,8 +459,8 @@ class DockerTasker(LastLogger):
                 force=force)  # returns True/False
             if not response:
                 logger.error("failed to tag image")
-                raise RuntimeError("Failed to tag image '%s': target_image = '%s'" %
-                        image.to_str(), target_image)
+                raise RuntimeError(
+                    "Failed to tag image '%s': target_image = '%s'" % (image.to_str(), target_image))
         else:
             logger.debug('image already tagged correctly, nothing to do')
         return target_image.to_str()  # this will be the proper name, not just repo/img
@@ -561,8 +561,6 @@ class DockerTasker(LastLogger):
         """
         logger.info("removing image '%s' from filesystem", image_id)
         logger.debug("image_id = '%s'", image_id)
-        if isinstance(image_id, ImageName):
-            image_id = image_id.to_str()
         self.d.remove_image(image_id, force=force, noprune=noprune)  # returns None
 
     def remove_container(self, container_id, force=False):

@@ -23,14 +23,23 @@ from atomic_reactor.util import process_substitutions
 MODULE_EXTENSIONS = ('.py', '.pyc', '.pyo')
 logger = logging.getLogger(__name__)
 
+try:
+    from typing import Any, Union
+    from atomic_reactor.core import DockerTasker
+    from atomic_reactor.inner import DockerBuildWorkflow
+except:
+    pass
+
 
 class AutoRebuildCanceledException(Exception):
     """Raised if a plugin cancels autorebuild"""
     def __init__(self, plugin_key, msg):
+        # type: (str, str) -> None
         self.plugin_key = plugin_key
         self.msg = msg
 
     def __str__(self):
+        # type: () -> str
         return 'plugin %s canceled autorebuild: %s' % (self.plugin_key, self.msg)
 
 
@@ -49,6 +58,7 @@ class Plugin(object):
     is_allowed_to_fail = True
 
     def __init__(self, *args, **kwargs):
+        # type: (*str, **str) -> None
         """
         constructor
         """
@@ -57,12 +67,15 @@ class Plugin(object):
         self.kwargs = kwargs
 
     def __str__(self):
+        # type: () -> str
         return "%s" % self.key
 
     def __repr__(self):
+        # type: () -> str
         return "Plugin(key='%s')" % self.key
 
     def run(self):
+        # type: () -> Any
         """
         each plugin has to implement this method -- it is used to run the plugin actually
 
@@ -82,6 +95,7 @@ class BuildPlugin(Plugin):
     """
 
     def __init__(self, tasker, workflow, *args, **kwargs):
+        # type: (DockerTasker, DockerBuildWorkflow, *str, **str) -> None
         """
         constructor
 
@@ -98,6 +112,7 @@ class BuildPlugin(Plugin):
 class PluginsRunner(object):
 
     def __init__(self, plugin_class_name, plugins_conf, *args, **kwargs):
+        # TODO: annotate this: (str, List[Dict[str, Any]], *str, **Dict[str, Any]) -> None
         """
         constructor
 
@@ -110,6 +125,7 @@ class PluginsRunner(object):
         self.plugin_classes = self.load_plugins(plugin_class_name)
 
     def load_plugins(self, plugin_class_name):
+        # type: (str) -> Dict[str, Plugin]
         """
         load all available plugins
         """
@@ -148,6 +164,7 @@ class PluginsRunner(object):
         return plugin_classes
 
     def create_instance_from_plugin(self, plugin_class, plugin_conf):
+        # type: (Any, Dict[str, Any]) -> Plugin
         """
         create instance from plugin using the plugin class and configuration passed to for it
 
@@ -159,15 +176,19 @@ class PluginsRunner(object):
         return plugin_instance
 
     def on_plugin_failed(self, plugin=None, exception=None):
+        # type: (str, Exception) -> None
         pass
 
     def save_plugin_timestamp(self, plugin, timestamp):
+        # type: (str, datetime.datetime) -> None
         pass
 
     def save_plugin_duration(self, plugin, duration):
+        # type: (str, float) -> None
         pass
 
     def run(self, keep_going=False):
+        # type: (bool) -> List[str]
         """
         run all requested plugins
 
@@ -252,6 +273,7 @@ class PluginsRunner(object):
 
 class BuildPluginsRunner(PluginsRunner):
     def __init__(self, dt, workflow, plugin_class_name, plugins_conf, *args, **kwargs):
+        # TODO: annotate this: (DockerTasker, DockerBuildWorkflow, str, List[Dict[str, Any]], *str, **List[str]) -> None
         """
         constructor
 
@@ -265,17 +287,21 @@ class BuildPluginsRunner(PluginsRunner):
         super(BuildPluginsRunner, self).__init__(plugin_class_name, plugins_conf, *args, **kwargs)
 
     def on_plugin_failed(self, plugin=None, exception=None):
+        # type: (str, Exception) -> None
         self.workflow.plugin_failed = True
         if plugin and exception:
             self.workflow.plugins_errors[plugin] = repr(exception)
 
     def save_plugin_timestamp(self, plugin, timestamp):
+        # type: (str, datetime.datetime) -> None
         self.workflow.plugins_timestamps[plugin] = timestamp.isoformat()
 
     def save_plugin_duration(self, plugin, duration):
+        # type: (str, float) -> None
         self.workflow.plugins_durations[plugin] = duration
 
     def _translate_special_values(self, obj_to_translate):
+        # TODO: annotate this: (Union[dict, list]) -> Union[Dict[str, Any], List[str], str]
         """
         you may want to write plugins for values which are not known before build:
         e.g. id of built image, base image name,... this method will therefore
@@ -302,6 +328,7 @@ class BuildPluginsRunner(PluginsRunner):
             return translation_dict.get(obj_to_translate, obj_to_translate)
 
     def _remove_unknown_args(self, plugin_class, plugin_conf):
+        # TODO: annotate this: (str, Dict[str, Any]) -> Dict[str, Any]
         args, _, var_kwargs, _ = inspect.getargspec(plugin_class.__init__)
 
         # Constructor defines **kwargs, it'll take any parameter
@@ -321,6 +348,7 @@ class BuildPluginsRunner(PluginsRunner):
         return known_plugin_conf
 
     def create_instance_from_plugin(self, plugin_class, plugin_conf):
+        # type: (Any, Dict[str, Any]) -> Plugin
         plugin_conf = self._translate_special_values(plugin_conf)
         plugin_conf = self._remove_unknown_args(plugin_class, plugin_conf)
         logger.info("running plugin instance with args: '%s'", plugin_conf)
@@ -335,6 +363,7 @@ class PreBuildPlugin(BuildPlugin):
 class PreBuildPluginsRunner(BuildPluginsRunner):
 
     def __init__(self, dt, workflow, plugins_conf, *args, **kwargs):
+        # TODO: annotate this: (DockerTasker, DockerBuildWorkflow, List[Dict[str, Any]], *str, **str) -> None
         logger.info("initializing runner of pre-build plugins")
         self.plugins_results = workflow.prebuild_results
         super(PreBuildPluginsRunner, self).__init__(dt, workflow, 'PreBuildPlugin', plugins_conf, *args, **kwargs)
@@ -346,6 +375,7 @@ class PrePublishPlugin(BuildPlugin):
 class PrePublishPluginsRunner(BuildPluginsRunner):
 
     def __init__(self, dt, workflow, plugins_conf, *args, **kwargs):
+        # TODO: annotate this: (DockerTasker, DockerBuildWorkflow, List[Dict[str, Any]], *str, **str) -> None
         logger.info("initializing runner of pre-publish plugins")
         self.plugins_results = workflow.prepub_results
         super(PrePublishPluginsRunner, self).__init__(dt, workflow, 'PrePublishPlugin', plugins_conf, *args, **kwargs)
@@ -358,11 +388,13 @@ class PostBuildPlugin(BuildPlugin):
 class PostBuildPluginsRunner(BuildPluginsRunner):
 
     def __init__(self, dt, workflow, plugins_conf, *args, **kwargs):
+        # TODO: annotate this: (DockerTasker, DockerBuildWorkflow, List[Dict[str, Any]], *str, **str) -> None
         logger.info("initializing runner of post-build plugins")
         self.plugins_results = workflow.postbuild_results
         super(PostBuildPluginsRunner, self).__init__(dt, workflow, 'PostBuildPlugin', plugins_conf, *args, **kwargs)
 
     def create_instance_from_plugin(self, plugin_class, plugin_conf):
+        # type: (Any, Dict[str, Any]) -> Plugin
         instance = super(PostBuildPluginsRunner, self).create_instance_from_plugin(plugin_class, plugin_conf)
         if isinstance(instance, ExitPlugin):
             logger.error("running exit plugin '%s' as post-build plugin", plugin_class.key)
@@ -379,6 +411,7 @@ class ExitPlugin(PostBuildPlugin):
 
 class ExitPluginsRunner(BuildPluginsRunner):
     def __init__(self, dt, workflow, plugins_conf, *args, **kwargs):
+        # TODO: annotate this: (DockerTasker, DockerBuildWorkflow, List[Dict[str, Any]], *str, **str) -> None
         logger.info("initializing runner of exit plugins")
         self.plugins_results = workflow.exit_results
         super(ExitPluginsRunner, self).__init__(dt, workflow, 'ExitPlugin',
@@ -388,6 +421,7 @@ class ExitPluginsRunner(BuildPluginsRunner):
 class InputPlugin(Plugin):
 
     def __init__(self, substitutions=None, **kwargs):
+        # type: (Union[Dict[str, str], List[str]], **str) -> None
         """
         constructor
         """
@@ -396,6 +430,7 @@ class InputPlugin(Plugin):
         self.substitutions = substitutions
 
     def substitute_configuration(self, build_json):
+        # type: (Dict[str, Any]) -> Dict[str, Any]
         """
         replace values of provided build json according to self.substitutions
 
@@ -419,6 +454,7 @@ class InputPlugin(Plugin):
 
     @classmethod
     def is_autousable(cls):
+        # type: (str) -> None
         """
         Determine if this plugin can run without providing any further user input,
         e.g. if expected default environment variables are defined, if expected default
@@ -431,11 +467,13 @@ class InputPlugin(Plugin):
 
 class InputPluginsRunner(PluginsRunner):
     def __init__(self, plugins_conf, *args, **kwargs):
+        # TODO: annotate this
         super(InputPluginsRunner, self).__init__('InputPlugin', plugins_conf, *args, **kwargs)
         self.plugins_results = {}
         self.autoinput = self.plugins_conf[0]['name'] == 'auto'
 
     def run(self, keep_going=False):
+        # TODO: annotate this
         """Wrap `PluginsRunner.run()` while implementing the `auto` input behaviour.
 
         If input plugin name is `auto`, then call `is_autousable` on all input plugins.
