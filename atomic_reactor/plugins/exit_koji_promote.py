@@ -17,6 +17,7 @@ import subprocess
 from tempfile import NamedTemporaryFile
 import time
 import copy
+import traceback
 
 from atomic_reactor import __version__ as atomic_reactor_version
 from atomic_reactor import start_time as atomic_reactor_start_time
@@ -710,5 +711,24 @@ class KojiPromotePlugin(ExitPlugin):
             task.wait()
             if task.failed():
                 raise RuntimeError("Task %s failed to tag koji build" % task_id)
+
+        # Send build notification
+        try:
+            self.log.debug("Sending build notification")
+            container_task_id = int(build_info["extra"]["container_koji_task_id"])
+            container_task_info = session.getTaskInfo(container_task_id)
+            user_id = container_task_info["owner"]
+            params = [[user_id], build_id, target_info, 'http://fake']
+            self.log.debug("params: %s" % params)
+            task_id = session.host.subtask('buildNotification', params)
+            self.log.debug("Sending a build notification, task id = %s" % task_id)
+            task = TaskWatcher(session, task_id,
+                               poll_interval=self.poll_interval)
+            task.wait()
+            if task.failed():
+                self.log.warn("Task %s failed to send notification about the build build" % task_id)
+        except Exception:
+            self.log.warn("Failed to send notification")
+            self.log.debug(traceback.format_exc())
 
         return build_id
