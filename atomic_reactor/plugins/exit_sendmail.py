@@ -216,7 +216,9 @@ class SendMailPlugin(ExitPlugin):
         s = None
         try:
             s = smtplib.SMTP(self.smtp_uri)
-            s.sendmail(self.from_address, receivers_list, msg.as_string())
+            #s.sendmail(self.from_address, receivers_list, msg.as_string())
+            self.log.info("Going to send a message to '%s' from '%s':\n===\n%s\n===\n" % (
+                receivers_list, self.from_address, msg.as_string()))
         except (socket.gaierror, smtplib.SMTPException) as e:
             raise PluginFailedException('Error communicating with SMTP server: %s' % str(e))
         finally:
