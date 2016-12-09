@@ -379,8 +379,6 @@ class BuildStepPluginRunner(BuildPluginsRunner):
         logger.info('building image %r inside current environment',
                     builder.image)
         builder._ensure_not_built()
-        logger.debug('using dockerfile:\n%s',
-                     DockerfileParser(builder.df_path).content)
 
         plugins_results = super(BuildStepPluginRunner, self).run()
 
