@@ -112,6 +112,7 @@ class InsideBuilder(LastLogger, BuilderStateMachine):
         self.image_id = None
         self.built_image_info = None
         self.image = ImageName.parse(image)
+        self.set_base_image('')
 
         # get info about base image from dockerfile
         #self.df_path, self.df_dir = self.source.get_dockerfile_path()
