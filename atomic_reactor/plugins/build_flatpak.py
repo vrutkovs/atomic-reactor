@@ -8,13 +8,18 @@ of the BSD license. See the LICENSE file for details.
 from __future__ import print_function, unicode_literals
 
 from atomic_reactor.plugin import BuildStepPlugin
-from atomic_reactor.util import wait_for_command
+from atomic_reactor.util import get_exported_image_metadata, wait_for_command
+
+import json
+from subprocess import Popen, PIPE, STDOUT
 
 
 class FlatpakPlugin(BuildStepPlugin):
 
     key = 'flatpak'
     is_allowed_to_fail = False
+
+    cwd = None
 
     def __init__(self, tasker, workflow, export_image=False):
         """
@@ -27,37 +32,74 @@ class FlatpakPlugin(BuildStepPlugin):
         super(FlatpakPlugin, self).__init__(tasker, workflow)
         self.export_image = export_image
 
-    def run(self):
-        builder = self.workflow.builder
+    def get_flatpak_info(self, df_path):
+        result = {}
+        with open(df_path) as flakpak_file:
+            flakpak_json = json.load(flakpak_file)
+            result['branch'] = flakpak_json['branch']
+            result['app'] = flakpak_json['app-id']
+            version = flakpak_json['runtime-version']
+            result['platform'] = "{}//{}".format(flakpak_json['runtime'], version)
+            result['sdk'] = "{}//{}".format(flakpak_json['sdk'], version)
 
-        environment = {
-            "RUNTIME_REMOTE": "https://sdk.gnome.org/gnome.flatpakrepo",
-            "RUNTIME_PLATFORM": "org.gnome.Platform//3.22",
-            "RUNTIME_SDK": "org.gnome.Sdk//3.22",
-            "SOURCE_GIT": "git://git.gnome.org/gnome-apps-nightly",
-            "SOURCE_BRANCH": "gnome-3-22",
-            "APPID": "org.gnome.clocks",
-            "RSYNC_REPO": "vrutkovs@shell.eng.brq.redhat.com:~/public_html/flatpak/gnome-clocks"
-        }
+        return result
 
-        host_config = self.tasker.d.create_host_config(
-            privileged=True,
-            network_mode='host')
+    def run_command(self, cmd):
+        process = Popen(cmd, shell=True, cwd=self.cwd, stdout=PIPE, stderr=STDOUT)
 
-        result = self.tasker.d.create_container(
-            image='brew-pulp-docker01.web.qa.ext.phx1.redhat.com:8888/vrutkovs/flatpak-builder:latest',
-            environment = environment,
-            command='/bin/bash /build.sh',
-            host_config=host_config,
-            detach=True)
-
-        container_id = result['Id']
-
-        logs = self.tasker.d.logs(container_id, follow=True, stream=True)
+        self.log.debug('Running: "%s"' % cmd)
         lines = []
-        for line in logs:
-            self.log.info(line.strip())
-            lines.append(line)
+        with process.stdout:
+            for line in iter(process.stdout.readline, ''):
+                self.log.info(line.strip())
+                lines.append(line)
+        process.wait()
+
         command_result = wait_for_command(line for line in lines)
+
+        #if process.returncode != 0:
+        #    raise RuntimeError('Error, exit code: %s' % process.returncode)
+
+        return command_result
+
+    def run(self):
+        self.cwd = self.workflow.builder.df_dir
+        flatpak_info = self.get_flatpak_info(self.workflow.builder.df_path)
+
+        # TODO: read this from env vars?
+        self.log.info("Fetching gpg key")
+        self.run_command(
+            "curl -kLs https://people.gnome.org/~alexl/keys/gnome-sdk.gpg -o gnome-sdk.gpg")
+
+        # TODO: read this from env vars?
+        self.log.info("Adding a remote")
+        self.run_command(
+            "flatpak remote-add --gpg-import=gnome-sdk.gpg origin http://sdk.gnome.org/repo/")
+
+        self.log.info("Installing platform")
+        self.run_command(
+            "flatpak -v --ostree-verbose install origin {}".format(flatpak_info['platform']))
+
+        self.log.info("Installing SDK")
+        self.run_command(
+            "flatpak -v --ostree-verbose install origin {}".format(flatpak_info['sdk']))
+
+        self.log.info("Building")
+        command_result = self.run_command(
+            'flatpak-builder --force-clean --ccache --require-changes --repo=repo --subject="Nightly build of {}, `date`" app flatpak.json'.format(flatpak_info['app']))
+
+        self.log.info("Installing the app")
+        self.run_command('flatpak --user remote-add --no-gpg-verify built-repo ./repo')
+        self.run_command('flatpak --user install built-repo {}'.format(flatpak_info['app']))
+        self.run_command('flatpak --user update {}'.format(flatpak_info['app']))
+
+        self.log.info("Packing in a single bundle")
+        outfile = "/{}.flatpak".format(flatpak_info['app'])
+        command_result = self.run_command(
+            'flatpak build-bundle ./repo {0} {1} {2}'.format(
+                outfile, flatpak_info['app'], flatpak_info['branch']))
+
+        metadata = get_exported_image_metadata(outfile)
+        self.workflow.exported_image_sequence.append(metadata)
 
         return command_result

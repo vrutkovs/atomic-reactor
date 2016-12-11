@@ -9,7 +9,7 @@ of the BSD license. See the LICENSE file for details.
 import os
 
 DOCKER_SOCKET_PATH = '/var/run/docker.sock'
-DOCKERFILE_FILENAME = 'Dockerfile'
+DOCKERFILE_FILENAME = 'flatpak.json'
 BUILD_JSON = 'build.json'
 BUILD_JSON_ENV = 'BUILD_JSON'
 RESULTS_JSON = 'results.json'

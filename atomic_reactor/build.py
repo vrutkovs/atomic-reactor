@@ -115,7 +115,8 @@ class InsideBuilder(LastLogger, BuilderStateMachine):
         self.set_base_image('')
 
         # get info about base image from dockerfile
-        #self.df_path, self.df_dir = self.source.get_dockerfile_path()
+        self.df_path, self.df_dir = self.source.get_dockerfile_path()
+
         #self.set_base_image(df_parser(self.df_path).baseimage)
         #logger.debug("base image specified in dockerfile = '%s'", self.base_image)
         #if not self.base_image.tag:
