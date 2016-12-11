@@ -384,8 +384,9 @@ class BuildStepPluginRunner(BuildPluginsRunner):
 
         builder.is_built = True
 
-        image_id = builder.get_built_image_info()['Id']
-        builder.image_id = image_id
+        #image_id = builder.get_built_image_info()['Id']
+        #builder.image_id = image_id
+        image_id = 'fake'
 
         self._build_result = BuildResult(plugins_results.values()[0], image_id)
 

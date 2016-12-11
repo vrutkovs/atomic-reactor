@@ -425,34 +425,6 @@ class KojiPromotePlugin(ExitPlugin):
 
         return digests
 
-    def get_repositories(self, digests):
-        """
-        Build the repositories metadata
-
-        :param digests: dict, repository -> digest
-        """
-        if self.workflow.push_conf.pulp_registries:
-            # If pulp was used, only report pulp images
-            registries = self.workflow.push_conf.pulp_registries
-        else:
-            # Otherwise report all the images we pushed
-            registries = self.workflow.push_conf.all_registries
-
-        output_images = []
-        for registry in registries:
-            image = self.pullspec_image.copy()
-            image.registry = registry.uri
-            pullspec = image.to_str()
-
-            output_images.append(pullspec)
-
-            digest = digests.get(image.to_str(registry=False))
-            if digest:
-                digest_pullspec = image.to_str(tag=False) + "@" + digest
-                output_images.append(digest_pullspec)
-
-        return output_images
-
     def get_output(self, buildroot_id):
         """
         Build the 'output' section of the metadata.
@@ -489,7 +461,7 @@ class KojiPromotePlugin(ExitPlugin):
             del config['container_config']
 
         digests = self.get_digests()
-        repositories = self.get_repositories(digests)
+        #repositories = self.get_repositories(digests)
         arch = os.uname()[4]
         tags = set(image.tag for image in self.workflow.tag_conf.primary_images)
         metadata, output = self.get_image_output(arch)
@@ -595,9 +567,6 @@ class KojiPromotePlugin(ExitPlugin):
             if '-' in image.tag[1:-1]:
                 self.pullspec_image = image
                 break
-
-        if not self.pullspec_image:
-            raise RuntimeError('Unable to determine pullspec_image')
 
         metadata_version = 0
 
