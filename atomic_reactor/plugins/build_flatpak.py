@@ -11,6 +11,7 @@ from atomic_reactor.plugin import BuildStepPlugin
 from atomic_reactor.util import get_exported_image_metadata, wait_for_command
 
 import json
+import gzip
 from subprocess import Popen, PIPE, STDOUT
 
 
@@ -95,11 +96,21 @@ class FlatpakPlugin(BuildStepPlugin):
 
         self.log.info("Packing in a single bundle")
         outfile = "/{}.flatpak".format(flatpak_info['app'])
-        command_result = self.run_command(
+        self.run_command(
             'flatpak build-bundle ./repo {0} {1} {2}'.format(
                 outfile, flatpak_info['app'], flatpak_info['branch']))
 
-        metadata = get_exported_image_metadata(outfile)
+        self.log.info("Compress the flatpak file")
+        outfile_zipped = "{}.gz".format(outfile)
+        with open(outfile, 'rb') as stream:
+            fp = gzip.open(outfile_zipped, 'wb', compresslevel=6)
+            _chunk_size = 1024**2  # 1 MB chunk size for reading/writing
+            data = stream.read(_chunk_size)
+            while data != b'':
+                fp.write(data)
+                data = stream.read(_chunk_size)
+
+        metadata = get_exported_image_metadata(outfile_zipped)
         self.workflow.exported_image_sequence.append(metadata)
 
         return command_result
