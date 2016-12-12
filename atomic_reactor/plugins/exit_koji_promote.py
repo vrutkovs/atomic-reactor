@@ -449,7 +449,7 @@ class KojiPromotePlugin(ExitPlugin):
         metadata, output = self.get_image_output(arch)
         metadata.update({
             'arch': arch,
-            'type': 'flatpak-image',
+            'type': 'docker-image',
         })
 
         # Add the 'docker save' image to the output
