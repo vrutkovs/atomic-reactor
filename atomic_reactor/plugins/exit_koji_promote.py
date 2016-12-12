@@ -345,14 +345,14 @@ class KojiPromotePlugin(ExitPlugin):
                                                 "openshift-final.log")
             output.append(Output(file=logfile, metadata=metadata))
 
-        docker_logs = NamedTemporaryFile(prefix="docker-%s" % self.build_id,
-                                         suffix=".log",
-                                         mode='wb')
-        docker_logs.write("\n".join(self.workflow.build_logs).encode('UTF-8'))
-        docker_logs.flush()
-        output.append(Output(file=docker_logs,
-                             metadata=self.get_output_metadata(docker_logs.name,
-                                                               "build.log")))
+        # docker_logs = NamedTemporaryFile(prefix="flatpak-%s" % self.build_id,
+        #                                  suffix=".log",
+        #                                  mode='wb')
+        # docker_logs.write("\n".join(self.workflow.build_logs).encode('UTF-8'))
+        # docker_logs.flush()
+        # output.append(Output(file=docker_logs,
+        #                      metadata=self.get_output_metadata(docker_logs.name,
+        #                                                        "build.log")))
         return output
 
     def get_image_components(self):
@@ -445,61 +445,23 @@ class KojiPromotePlugin(ExitPlugin):
         output_files = [add_log_type(add_buildroot_id(metadata))
                         for metadata in self.get_logs()]
 
-        # Parent of squashed built image is base image
-        image_id = self.workflow.builder.image_id
-        parent_id = self.workflow.base_image_inspect['Id']
-
-        # Read config from the registry using v2 schema 2 digest
-        registries = self.workflow.push_conf.docker_registries
-        if registries:
-            config = copy.deepcopy(registries[0].config)
-        else:
-            config = {}
-
-        # We don't need container_config section
-        if config and 'container_config' in config:
-            del config['container_config']
-
-        digests = self.get_digests()
-        #repositories = self.get_repositories(digests)
         arch = os.uname()[4]
-        tags = set(image.tag for image in self.workflow.tag_conf.primary_images)
         metadata, output = self.get_image_output(arch)
         metadata.update({
             'arch': arch,
-            'type': 'docker-image',
-            'components': self.get_image_components(),
-            'extra': {
-                'image': {
-                    'arch': arch,
-                },
-                'docker': {
-                    'id': image_id,
-                    'parent_id': parent_id,
-                    'repositories': repositories,
-                    'tags': list(tags),
-                    'config': config
-                },
-            },
+            'type': 'flatpak-image',
         })
-
-        if not config:
-            del metadata['extra']['docker']['config']
 
         # Add the 'docker save' image to the output
         image = add_buildroot_id(output)
         output_files.append(image)
 
+        self.log.info('output_files: %s' % output_files)
+
         return output_files
 
     def get_build(self, metadata):
         start_time = int(atomic_reactor_start_time)
-
-        labels = df_parser(self.workflow.builder.df_path, workflow=self.workflow).labels
-
-        component = get_preferred_label(labels, 'com.redhat.component')
-        version = get_preferred_label(labels, 'version')
-        release = get_preferred_label(labels, 'release')
 
         source = self.workflow.source
         if not isinstance(source, GitSource):
@@ -531,9 +493,9 @@ class KojiPromotePlugin(ExitPlugin):
                     extra['filesystem_koji_task_id'] = task_id
 
         build = {
-            'name': component,
-            'version': version,
-            'release': release,
+            'name': 'gnome-clocks.fake',
+            'version': '1.0.fake',
+            'release': '1',
             'source': "{0}#{1}".format(source.uri, source.commit_id),
             'start_time': start_time,
             'end_time': int(time.time()),
