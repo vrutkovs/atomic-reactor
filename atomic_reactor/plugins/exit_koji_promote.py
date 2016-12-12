@@ -510,6 +510,7 @@ class KojiPromotePlugin(ExitPlugin):
                 },
             },
         })
+        self.log.info("metadata: \n\n%s\n\n" % metadata)
 
         if not config:
             del metadata['extra']['docker']['config']
