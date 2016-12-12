@@ -376,7 +376,7 @@ class DockerBuildWorkflow(object):
                 self.plugins_errors['dockerbuild'] = ''
                 return build_result
 
-            self.built_image_inspect = self.builder.inspect_built_image()
+            #self.built_image_inspect = self.builder.inspect_built_image()
 
             # run prepublish plugins
             prepublish_runner = PrePublishPluginsRunner(self.builder.tasker, self, self.prepublish_plugins_conf,
