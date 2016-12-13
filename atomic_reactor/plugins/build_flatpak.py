@@ -95,7 +95,7 @@ class FlatpakPlugin(BuildStepPlugin):
         self.run_command('flatpak --user update {}'.format(flatpak_info['app']))
 
         self.log.info("Packing in a single bundle")
-        outfile = "/{}.flatpak".format(flatpak_info['app'])
+        outfile = "/{}_flatpak".format(flatpak_info['app'])
         self.run_command(
             'flatpak build-bundle ./repo {0} {1} {2}'.format(
                 outfile, flatpak_info['app'], flatpak_info['branch']))
