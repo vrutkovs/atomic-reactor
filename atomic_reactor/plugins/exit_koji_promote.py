@@ -504,7 +504,7 @@ class KojiPromotePlugin(ExitPlugin):
         build = {
             'name': 'gnome-clocks.fake',
             'version': '1.0.fake',
-            'release': '2',
+            'release': '3',
             'source': "{0}#{1}".format(source.uri, source.commit_id),
             'start_time': start_time,
             'end_time': int(time.time()),
