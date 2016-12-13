@@ -450,6 +450,15 @@ class KojiPromotePlugin(ExitPlugin):
         metadata.update({
             'arch': arch,
             'type': 'docker-image',
+            'components': [],
+            'extra': {
+                'image': {
+                    'arch': arch
+                },
+                'docker': {
+                    'id': 'fake'
+                }
+            }
         })
 
         # Add the 'docker save' image to the output
