@@ -395,7 +395,7 @@ class KojiPromotePlugin(ExitPlugin):
         image_id = self.workflow.builder.image_id
         saved_image = self.workflow.exported_image_sequence[-1].get('path')
         ext = saved_image.split('.', 1)[1]
-        name_fmt = 'flatpak-gnome-clocks.{arch}.gz'
+        name_fmt = 'flatpak-gnome-clocks.{arch}.tar.gz'
         image_name = name_fmt.format(id=image_id, arch=arch, ext=ext)
         if self.metadata_only:
             metadata = self.get_output_metadata(os.path.devnull, image_name)
