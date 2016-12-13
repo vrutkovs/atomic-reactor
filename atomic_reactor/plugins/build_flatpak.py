@@ -101,7 +101,7 @@ class FlatpakPlugin(BuildStepPlugin):
                 outfile, flatpak_info['app'], flatpak_info['branch']))
 
         self.log.info("Compress the flatpak file")
-        outfile_zipped = "{}.gz".format(outfile)
+        outfile_zipped = "{}.tar.gz".format(outfile)
         with open(outfile, 'rb') as stream:
             fp = gzip.open(outfile_zipped, 'wb', compresslevel=6)
             _chunk_size = 1024**2  # 1 MB chunk size for reading/writing
