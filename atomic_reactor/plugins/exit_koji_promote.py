@@ -392,10 +392,10 @@ class KojiPromotePlugin(ExitPlugin):
 
         """
 
-        image_id = self.workflow.builder.image_id
+        image_id = self.workflow.flatpak_component
         saved_image = self.workflow.exported_image_sequence[-1].get('path')
         ext = saved_image.split('.', 1)[1]
-        name_fmt = 'flatpak-gnome-clocks.{arch}.tar.gz'
+        name_fmt = 'flatpak-{id}.{arch}.tar.gz'
         image_name = name_fmt.format(id=image_id, arch=arch, ext=ext)
         if self.metadata_only:
             metadata = self.get_output_metadata(os.path.devnull, image_name)
@@ -469,6 +469,29 @@ class KojiPromotePlugin(ExitPlugin):
 
         return output_files
 
+    def flatpak_bump_release(self, component, version):
+        try:
+            build_info = {'name': component, 'version': version}
+            self.log.debug('getting next release from build info: %s', build_info)
+            next_release = self.xmlrpc.getNextRelease(build_info)
+
+            # getNextRelease will return the release of the last successful build
+            # but next_release might be a failed build. Koji's CGImport doesn't
+            # allow reuploading builds, so instead we should increment next_release
+            # and make sure the build doesn't exist
+            while True:
+                build_info = {'name': component, 'version': version, 'release': next_release}
+                self.log.debug('checking that the build does not exist: %s', build_info)
+                build = self.xmlrpc.getBuild(build_info)
+                if not build:
+                    break
+
+                next_release = str(int(next_release) + 1)
+        except:
+            next_release = 1
+
+        return next_release
+
     def get_build(self, metadata):
         start_time = int(atomic_reactor_start_time)
 
@@ -501,10 +524,14 @@ class KojiPromotePlugin(ExitPlugin):
                 else:
                     extra['filesystem_koji_task_id'] = task_id
 
+        component = self.workflow.flatpak_component
+        version = self.workflow.flatpak_branch
+        release = self.flatpak_bump_release(component, version)
+
         build = {
-            'name': 'gnome-clocks.fake',
-            'version': '1.0.fake',
-            'release': '5',
+            'name': component,
+            'version': version,
+            'release': release,
             'source': "{0}#{1}".format(source.uri, source.commit_id),
             'start_time': start_time,
             'end_time': int(time.time()),

@@ -113,4 +113,7 @@ class FlatpakPlugin(BuildStepPlugin):
         metadata = get_exported_image_metadata(outfile_zipped)
         self.workflow.exported_image_sequence.append(metadata)
 
+        self.workflow.flatpak_component = flatpak_info['app']
+        self.workflow.flatpak_branch = flatpak_info['branch']
+
         return command_result
