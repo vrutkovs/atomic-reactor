@@ -470,6 +470,7 @@ class KojiPromotePlugin(ExitPlugin):
         return output_files
 
     def flatpak_bump_release(self, component, version):
+
         try:
             build_info = {'name': component, 'version': version}
             self.log.debug('getting next release from build info: %s', build_info)
@@ -524,12 +525,12 @@ class KojiPromotePlugin(ExitPlugin):
                 else:
                     extra['filesystem_koji_task_id'] = task_id
 
-        component = self.workflow.flatpak_component
+        component = 'flatpak-%s' % self.workflow.flatpak_component
         version = self.workflow.flatpak_branch
         release = self.flatpak_bump_release(component, version)
 
         build = {
-            'name': 'flatpak-%s' % component,
+            'name': component,
             'version': version,
             'release': release,
             'source': "{0}#{1}".format(source.uri, source.commit_id),
