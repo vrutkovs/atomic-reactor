@@ -490,7 +490,7 @@ class KojiPromotePlugin(ExitPlugin):
         except:
             next_release = 1
 
-        return next_release
+        return str(next_release)
 
     def get_build(self, metadata):
         start_time = int(atomic_reactor_start_time)
