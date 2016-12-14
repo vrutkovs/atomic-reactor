@@ -475,6 +475,7 @@ class KojiPromotePlugin(ExitPlugin):
             build_info = {'name': component, 'version': version}
             self.log.debug('getting next release from build info: %s', build_info)
             next_release = self.xmlrpc.getNextRelease(build_info)
+            self.log.debug('got next_release: "%s"' % next_release)
 
             # getNextRelease will return the release of the last successful build
             # but next_release might be a failed build. Koji's CGImport doesn't
@@ -488,7 +489,9 @@ class KojiPromotePlugin(ExitPlugin):
                     break
 
                 next_release = str(int(next_release) + 1)
-        except:
+                self.log.debug('set next_release to "%s"' % next_release)
+        except Exception:
+            self.log.error("exception, resetting next_release to 1", exc_info=True)
             next_release = 1
 
         return str(next_release)
