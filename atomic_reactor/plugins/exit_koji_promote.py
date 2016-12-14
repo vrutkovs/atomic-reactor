@@ -472,9 +472,10 @@ class KojiPromotePlugin(ExitPlugin):
     def flatpak_bump_release(self, component, version):
 
         try:
+            session = self.login()
             build_info = {'name': component, 'version': version}
             self.log.debug('getting next release from build info: %s', build_info)
-            next_release = self.xmlrpc.getNextRelease(build_info)
+            next_release = session.getNextRelease(build_info)
             self.log.debug('got next_release: "%s"' % next_release)
 
             # getNextRelease will return the release of the last successful build
@@ -484,7 +485,7 @@ class KojiPromotePlugin(ExitPlugin):
             while True:
                 build_info = {'name': component, 'version': version, 'release': next_release}
                 self.log.debug('checking that the build does not exist: %s', build_info)
-                build = self.xmlrpc.getBuild(build_info)
+                build = session.getBuild(build_info)
                 if not build:
                     break
 
