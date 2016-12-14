@@ -529,7 +529,7 @@ class KojiPromotePlugin(ExitPlugin):
         release = self.flatpak_bump_release(component, version)
 
         build = {
-            'name': component,
+            'name': 'flatpak-%s' % component,
             'version': version,
             'release': release,
             'source': "{0}#{1}".format(source.uri, source.commit_id),
