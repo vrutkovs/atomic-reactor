@@ -60,17 +60,15 @@ def test_add_help_plugin(tmpdir, docker_tasker, filename):
     generate_a_file(help_markdown_path, "foo")
     help_man_path = os.path.join(workflow.builder.df_dir, AddHelpPlugin.man_filename)
     generate_a_file(help_man_path, "bar")
-    cmd_env = os.environ.copy()
-    cmd_env['HELP_MD'] = help_markdown_path
-    cmd_env['HELP_1'] = help_man_path
+
+    cmd = [u'go-md2man', u'-in={}'.format(help_markdown_path), u'-out={}'.format(help_man_path)]
+
+    def check_cmd(received_cmd, stderr):
+        assert received_cmd == cmd
 
     (flexmock(subprocess)
          .should_receive("check_output")
-         .with_args(AddHelpPlugin.go_md2man_cmd,
-                    stderr=subprocess.STDOUT,
-                    shell=True,
-                    env=cmd_env)
-         .and_return(None))
+         .replace_with(check_cmd))
 
     runner = PreBuildPluginsRunner(
         docker_tasker,
@@ -129,40 +127,34 @@ def test_add_help_md2man_error(request, tmpdir, docker_tasker, filename, go_md2m
     help_man_path = os.path.join(workflow.builder.df_dir, AddHelpPlugin.man_filename)
     if go_md2man_result != 'result_missing':
         generate_a_file(help_man_path, "bar")
-    cmd_env = os.environ.copy()
-    cmd_env['HELP_MD'] = help_markdown_path
-    cmd_env['HELP_1'] = help_man_path
+
+    cmd = [u'go-md2man', u'-in={}'.format(help_markdown_path), u'-out={}'.format(help_man_path)]
+
+    def check_cmd_pass(received_cmd, stderr):
+        assert received_cmd == cmd
+        assert stderr == subprocess.STDOUT
+
+    def check_cmd_binary_missing(received_cmd, stderr):
+        check_cmd_pass(received_cmd, stderr)
+        raise subprocess.CalledProcessError(returncode=127, cmd=received_cmd)
+
+    def check_cmd_fail(received_cmd, stderr):
+        check_cmd_pass(received_cmd, stderr)
+        raise subprocess.CalledProcessError(returncode=1, cmd=received_cmd)
+
 
     if go_md2man_result == 'binary_missing':
         (flexmock(subprocess)
              .should_receive("check_output")
-             .with_args(AddHelpPlugin.go_md2man_cmd,
-                        stderr=subprocess.STDOUT,
-                        shell=True,
-                        env=cmd_env)
-             .and_raise(
-                subprocess.CalledProcessError(
-                    returncode=127,
-                    cmd=AddHelpPlugin.go_md2man_cmd)))
+             .replace_with(check_cmd_binary_missing))
     elif go_md2man_result == 'fail':
         (flexmock(subprocess)
              .should_receive("check_output")
-             .with_args(AddHelpPlugin.go_md2man_cmd,
-                        stderr=subprocess.STDOUT,
-                        shell=True,
-                        env=cmd_env)
-             .and_raise(
-                subprocess.CalledProcessError(
-                    returncode=1,
-                    cmd=AddHelpPlugin.go_md2man_cmd)))
+             .replace_with(check_cmd_fail))
     elif go_md2man_result in ['pass', 'result_missing']:
         (flexmock(subprocess)
              .should_receive("check_output")
-             .with_args(AddHelpPlugin.go_md2man_cmd,
-                        stderr=subprocess.STDOUT,
-                        shell=True,
-                        env=cmd_env)
-             .and_return(None))
+             .replace_with(check_cmd_pass))
 
     fake_logger = FakeLogger()
     existing_logger = atomic_reactor.plugin.logger
@@ -187,7 +179,7 @@ def test_add_help_md2man_error(request, tmpdir, docker_tasker, filename, go_md2m
     if go_md2man_result == 'binary_missing':
         error_message = "Help file is available, but go-md2man is not present in a buildroot"
     elif go_md2man_result == 'fail':
-        error_message = "Error running %s: CalledProcessError()" % AddHelpPlugin.go_md2man_cmd
+        error_message = "CalledProcessError()"
     elif go_md2man_result == 'result_missing':
         error_message = "go-md2man run complete, but man file is not found"
 

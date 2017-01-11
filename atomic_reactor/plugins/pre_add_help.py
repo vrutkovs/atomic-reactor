@@ -26,7 +26,6 @@ from atomic_reactor.util import df_parser
 class AddHelpPlugin(PreBuildPlugin):
     key = "add_help"
     man_filename = "help.1"
-    go_md2man_cmd = 'go-md2man -in="$HELP_MD" -out="$HELP_1"'
 
     def __init__(self, tasker, workflow, help_file="help.md"):
         """
@@ -52,16 +51,17 @@ class AddHelpPlugin(PreBuildPlugin):
             return
 
         man_path = os.path.join(self.workflow.builder.df_dir, self.man_filename)
-        cmd_env = os.environ.copy()
-        cmd_env['HELP_MD'] = help_path
-        cmd_env['HELP_1'] = man_path
+
+        go_md2man_cmd = [u'go-md2man', u'-in={}'.format(help_path), u'-out={}'.format(man_path)]
+
         try:
-            check_output(self.go_md2man_cmd, stderr=STDOUT, shell=True, env=cmd_env)
+            check_output(go_md2man_cmd, stderr=STDOUT)
         except CalledProcessError as e:
             if e.returncode == 127:
                 raise RuntimeError(
                     "Help file is available, but go-md2man is not present in a buildroot")
-            raise RuntimeError("Error running %s: %r" % (e.cmd, e))
+            raise RuntimeError("Error running %s: %r, exit code: %s, output: '%s'" % (
+                e.cmd, e, e.returncode, e.output))
 
         if not os.path.exists(man_path):
             raise RuntimeError("go-md2man run complete, but man file is not found")
