@@ -563,10 +563,14 @@ class KojiPromotePlugin(ExitPlugin):
                     extra['filesystem_koji_task_id'] = task_id
 
         help_result = self.workflow.prebuild_results.get(AddHelpPlugin.key)
+        self.log.debug("help_result: %s", help_result)
         if help_result is not None:
             try:
+                self.log.debug("help config: %s", self.workflow.prebuild_plugins_conf[AddHelpPlugin.key])
+                self.log.debug("help file: %s", self.workflow.prebuild_plugins_conf[AddHelpPlugin.key]['help_file'])
                 extra['image']['help'] = self.workflow.prebuild_plugins_conf[AddHelpPlugin.key]['help_file']
-            except (KeyError, TypeError):
+            except (KeyError, TypeError) as e:
+                self.log.exception("help config not found")
                 extra['image']['help'] = DEFAULT_HELP_FILENAME
 
         build = {
