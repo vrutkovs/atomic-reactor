@@ -566,6 +566,7 @@ class KojiPromotePlugin(ExitPlugin):
         self.log.debug("help_result: %s", help_result)
         if help_result is not None:
             try:
+                self.log.debug("prebuilt config: %s", self.workflow.prebuild_plugins_conf)
                 self.log.debug("help config: %s", self.workflow.prebuild_plugins_conf[AddHelpPlugin.key])
                 self.log.debug("help file: %s", self.workflow.prebuild_plugins_conf[AddHelpPlugin.key]['help_file'])
                 extra['image']['help'] = self.workflow.prebuild_plugins_conf[AddHelpPlugin.key]['help_file']
