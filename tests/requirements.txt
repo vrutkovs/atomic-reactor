@@ -1,4 +1,4 @@
-flexmock
+flexmock==0.10.2
 ordereddict
 pytest
 six
