@@ -1,5 +1,5 @@
 flexmock==0.10.2
-ordereddict
+ordereddict==1.1
 pytest==3.0.6
 six==1.10.0
 pytest-capturelog==0.7
