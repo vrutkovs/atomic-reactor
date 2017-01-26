@@ -3,4 +3,4 @@ ordereddict
 pytest==3.0.6
 six==1.10.0
 pytest-capturelog==0.7
-responses
+responses==0.5.1
