@@ -2,5 +2,5 @@ flexmock
 ordereddict
 pytest
 six
-pytest-capturelog
+pytest-capturelog==0.7
 responses
