@@ -10,6 +10,7 @@ from __future__ import unicode_literals
 
 import json
 import os
+from dockerfile_parse import DockerfileParser
 
 from atomic_reactor.build import InsideBuilder
 from atomic_reactor.util import ImageName
@@ -79,8 +80,18 @@ class MockInsideBuilder(object):
         self.tasker = MockDockerTasker()
         self.base_image = ImageName(repo='Fedora', tag='22')
         self.image_id = 'asd'
+        self.image = 'image'
         self.failed = failed
         self.timeout = timeout
+        self.df_path = 'some'
+        self.df_dir = 'some'
+        self.tasker.build_image_from_path = flexmock()
+        self.get_built_image_info = flexmock()
+        flexmock(self, get_built_image_info={'Id': 'some'})
+
+        def simplegen(x, y):
+            yield "some"
+        flexmock(self.tasker, build_image_from_path=simplegen)
 
     @property
     def source(self):
@@ -104,6 +115,11 @@ class MockInsideBuilder(object):
     def inspect_built_image(self):
         return None
 
+    def _ensure_not_built(self):
+        pass
+
+#    def get_built_image_info(self):
+#        return {'Id': 'some'}
 
 class RaisesMixIn(object):
     """
@@ -243,6 +259,7 @@ def test_workflow():
     Test normal workflow.
     """
 
+    flexmock(DockerfileParser, content='df_content')
     this_file = inspect.getfile(PreWatched)
     mock_docker()
     fake_builder = MockInsideBuilder()
@@ -284,6 +301,7 @@ class FakeLogger(object):
         self.infos = []
         self.warnings = []
         self.errors = []
+        self.exc = []
 
     def log(self, logs, args):
         logs.append(args)
@@ -299,6 +317,9 @@ class FakeLogger(object):
 
     def error(self, *args):
         self.log(self.errors, args)
+
+    def exception(self, *args):
+        self.log(self.exc, args)
 
 
 def test_workflow_compat(request):
@@ -892,6 +913,7 @@ def test_cancel_build(request, fail_at):
     phase_duration = 10
     sigterm_timeout = 2
 
+    flexmock(DockerfileParser, content='df_content')
     phase_timeout = {'pre': 0, 'prepub': 0, 'build': 0, 'post': 0, 'exit': 0}
     phase_timeout[fail_at] = phase_duration
 
@@ -966,6 +988,7 @@ def test_show_version(request, has_version):
     if available
     """
     VERSION = "1.0"
+    flexmock(DockerfileParser, content='df_content')
 
     mock_docker()
     fake_builder = MockInsideBuilder()
