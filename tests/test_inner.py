@@ -17,7 +17,7 @@ from atomic_reactor.build import InsideBuilder
 from atomic_reactor.util import ImageName
 from atomic_reactor.plugin import (PreBuildPlugin, PrePublishPlugin, PostBuildPlugin, ExitPlugin,
                                    AutoRebuildCanceledException, PluginFailedException,
-                                   BuildCanceledException)
+                                   BuildCanceledException, BuildStepPlugin)
 import atomic_reactor.plugin
 import atomic_reactor.inner
 import logging
@@ -207,6 +207,20 @@ class ExitWatched(WatchedMixIn, ExitPlugin):
     key = 'exit_watched'
 
 
+class BuildStepWatched(WatchedMixIn, BuildStepPlugin):
+    """
+    An Build plugin plugin we can watch.
+    """
+
+    key = 'build_watched'
+
+    def run(self):
+        result = X()
+        setattr(result, 'logs', None)
+        setattr(result, 'is_failed', lambda: False)
+        return result
+
+
 class ExitRaises(RaisesMixIn, ExitPlugin):
     """
     An Exit plugin that should raise an exception.
@@ -242,6 +256,17 @@ class Watcher(object):
 
     def was_called(self):
         return self.called
+
+
+class WatcherWithPause(Watcher):
+
+    def __init__(self, timeout=10):
+        super(WatcherWithPause, self).__init__()
+        self.timeout = timeout
+
+    def call(self):
+        super(WatcherWithPause, self).call()
+        sleep(self.timeout)
 
 
 class WatcherWithSignal(Watcher):
@@ -355,7 +380,6 @@ def test_workflow_compat(request):
     workflow.build_docker_image()
     assert watch_exit.was_called()
     assert len(fake_logger.errors) > 0
-
 
 class Pre(PreBuildPlugin):
     """
@@ -928,6 +952,7 @@ def test_cancel_build(request, fail_at):
     watch_prepub = WatcherWithSignal(phase_signal['prepub'])
     watch_post = WatcherWithSignal(phase_signal['post'])
     watch_exit = WatcherWithSignal(phase_signal['exit'])
+    watch_build = WatcherWithPause(build_timeout)
 
     fake_logger = FakeLogger()
     existing_logger = atomic_reactor.plugin.logger
@@ -950,6 +975,10 @@ def test_cancel_build(request, fail_at):
                                    postbuild_plugins=[{'name': 'post_watched',
                                                        'args': {
                                                            'watcher': watch_post
+                                                       }}],
+                                   buildstep_plugins=[{'name': 'build_watched',
+                                                       'args': {
+                                                            'watcher': watch_build
                                                        }}],
                                    exit_plugins=[{'name': 'exit_watched',
                                                   'args': {
