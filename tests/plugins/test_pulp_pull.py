@@ -20,7 +20,7 @@ class MockerTasker(object):
     def __init__(self):
         self.pulled_images = []
 
-    def pull_image(self, image):
+    def pull_image(self, image, insecure):
         self.pulled_images.append(image)
         return image.to_str()
 
