@@ -30,7 +30,7 @@ class PulpPullPlugin(PostBuildPlugin):
     key = 'pulp_pull'
     is_allowed_to_fail = False
 
-    def __init__(self, tasker, workflow, timeout=600, retry_delay=30, insecure=False):
+    def __init__(self, tasker, workflow, timeout=600, retry_delay=30, insecure=True):
         """
         constructor
 
