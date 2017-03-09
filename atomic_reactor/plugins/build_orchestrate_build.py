@@ -21,6 +21,7 @@ from atomic_reactor.util import get_preferred_label, df_parser
 from osbs.api import OSBS
 from osbs.conf import Configuration
 from osbs.constants import BUILD_FINISHED_STATES
+from osbs.exceptions import OsbsResponseException
 
 
 ClusterInfo = namedtuple('ClusterInfo', ('cluster', 'platform', 'osbs', 'load'))
@@ -146,7 +147,10 @@ class OrchestrateBuildPlugin(BuildStepPlugin):
     def get_current_builds(self, osbs):
         field_selector = ','.join(['status!={status}'.format(status=status.capitalize())
                                    for status in BUILD_FINISHED_STATES])
-        return len(osbs.list_builds(field_selector=field_selector))
+        try:
+            return len(osbs.list_builds(field_selector=field_selector))
+        except OsbsResponseException:
+            return -1
 
     def get_cluster_info(self, cluster, platform):
         kwargs = {'conf_section': cluster.name}
@@ -155,7 +159,10 @@ class OrchestrateBuildPlugin(BuildStepPlugin):
         conf = Configuration(**kwargs)
         osbs = OSBS(conf, conf)
         current_builds = self.get_current_builds(osbs)
-        load = current_builds / cluster.max_concurrent_builds
+        if current_builds == -1:
+            load = 2
+        else:
+            load = current_builds / cluster.max_concurrent_builds
         return ClusterInfo(cluster, platform, osbs, load)
 
     def choose_cluster(self, platform):
