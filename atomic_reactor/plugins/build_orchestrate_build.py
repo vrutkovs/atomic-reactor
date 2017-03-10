@@ -13,7 +13,9 @@ from multiprocessing.pool import ThreadPool
 
 import json
 import os
+import logging
 
+from atomic_reactor import set_logging
 from atomic_reactor.build import BuildResult
 from atomic_reactor.plugin import BuildStepPlugin
 from atomic_reactor.plugins.pre_reactor_config import get_config
@@ -158,6 +160,7 @@ class OrchestrateBuildPlugin(BuildStepPlugin):
             kwargs['conf_file'] = os.path.join(self.osbs_client_config, 'osbs.conf')
         conf = Configuration(**kwargs)
         osbs = OSBS(conf, conf)
+        set_logging(name="osbs", level=logging.DEBUG)
         current_builds = self.get_current_builds(osbs)
         if current_builds == -1:
             load = 2
