@@ -159,8 +159,10 @@ class OrchestrateBuildPlugin(BuildStepPlugin):
         if self.osbs_client_config:
             kwargs['conf_file'] = os.path.join(self.osbs_client_config, 'osbs.conf')
         conf = Configuration(**kwargs)
-        osbs = OSBS(conf, conf)
+        scratch_conf = Configuration(**kwargs)
+        osbs = OSBS(conf, scratch_conf)
         set_logging(name="osbs", level=logging.DEBUG)
+        self.log.info("Going to use token '%s'" % osbs.os_conf.get_oauth2_token())
         current_builds = self.get_current_builds(osbs)
         if current_builds == -1:
             load = 2
