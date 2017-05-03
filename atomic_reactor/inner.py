@@ -62,6 +62,10 @@ class BuildResultsEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
+#ohlook, a lint error in a new code!
+import pdb; pdb.set_trace()
+
+
 class BuildResultsJSONDecoder(json.JSONDecoder):
     def decode(self, obj):
         d = super(BuildResultsJSONDecoder, self).decode(obj)
