@@ -23,6 +23,8 @@ import uuid
 import yaml
 import codecs
 
+import docker
+
 from atomic_reactor.constants import DOCKERFILE_FILENAME, TOOLS_USED, INSPECT_CONFIG
 
 from dockerfile_parse import DockerfileParser

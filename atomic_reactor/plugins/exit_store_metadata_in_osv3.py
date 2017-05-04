@@ -163,7 +163,7 @@ class StoreMetadataInOSv3Plugin(ExitPlugin):
 
         try:
             base_image_id = self.workflow.base_image_inspect['Id']
-        except docker.errors.NotFound:
+        except (docker.errors.NotFound, KeyError):
             base_image_id = ""
 
         annotations = {
