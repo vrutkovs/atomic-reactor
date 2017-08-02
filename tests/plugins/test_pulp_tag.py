@@ -10,6 +10,16 @@ from __future__ import unicode_literals
 
 import os
 import json
+import sys
+
+try:
+    if sys.version_info.major > 2:
+        # importing dockpulp in Python 3 causes SyntaxError
+        raise ImportError
+
+    import dockpulp
+except ImportError:
+    dockpulp = None
 
 from osbs.build.build_response import BuildResponse
 from atomic_reactor.core import DockerTasker
@@ -20,11 +30,6 @@ from atomic_reactor.build import BuildResult
 from atomic_reactor.plugins.build_orchestrate_build import (OrchestrateBuildPlugin,
                                                             WORKSPACE_KEY_BUILD_INFO)
 from atomic_reactor.constants import PLUGIN_PULP_TAG_KEY
-
-try:
-    import dockpulp
-except (ImportError, SyntaxError):
-    dockpulp = None
 
 import pytest
 from flexmock import flexmock
