@@ -25,6 +25,7 @@ except ImportError:
     # Now load it properly, the same way the plugin will
     del koji
     import koji
+    sys.path.remove(os.path.dirname(mock_koji_path))
 
 from atomic_reactor.core import DockerTasker
 from atomic_reactor.plugins.exit_koji_tag_build import KojiTagBuildPlugin

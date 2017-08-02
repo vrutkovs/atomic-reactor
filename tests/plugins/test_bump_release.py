@@ -25,6 +25,7 @@ except ImportError:
     # Now load it properly, the same way the plugin will
     del koji
     import koji as koji
+    sys.path.remove(os.path.dirname(mock_koji_path))
 
 from atomic_reactor.plugins.pre_bump_release import BumpReleasePlugin
 from atomic_reactor.util import df_parser

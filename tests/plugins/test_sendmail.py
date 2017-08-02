@@ -21,7 +21,7 @@ except ImportError:
     # Now load it properly, the same way the plugin will
     del koji
     import koji
-
+    sys.path.remove(os.path.dirname(mock_koji_path))
 
 from atomic_reactor.plugin import PluginFailedException
 from atomic_reactor.plugins.pre_check_and_set_rebuild import CheckAndSetRebuildPlugin

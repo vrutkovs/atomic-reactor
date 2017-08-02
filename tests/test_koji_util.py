@@ -24,6 +24,7 @@ except ImportError:
     # Now load it properly, the same way the module we're testing will
     del koji
     import koji
+    sys.path.remove(os.path.dirname(mock_koji_path))
 
 from atomic_reactor.koji_util import (koji_login, create_koji_session,
                                       TaskWatcher, tag_koji_build)

@@ -25,6 +25,7 @@ except ImportError:
     # Now load it properly, the same way the plugin will
     del koji
     import koji
+    sys.path.remove(os.path.dirname(mock_koji_path))
 
 from osbs.build.build_response import BuildResponse
 from atomic_reactor.core import DockerTasker

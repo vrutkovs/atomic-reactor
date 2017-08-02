@@ -29,6 +29,7 @@ except ImportError:
     # Now load it properly, the same way the plugin will
     del koji
     import koji as koji
+    sys.path.remove(os.path.dirname(mock_koji_path))
 
 from atomic_reactor.inner import DockerBuildWorkflow
 from atomic_reactor.plugin import PreBuildPluginsRunner, PluginFailedException

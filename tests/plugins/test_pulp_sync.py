@@ -30,6 +30,7 @@ except ImportError:
     # Now load it properly, the same way the plugin will
     del dockpulp
     import dockpulp
+    sys.path.remove(os.path.dirname(mock_dockpulp_path))
 
 from atomic_reactor.plugins.post_pulp_sync import PulpSyncPlugin
 
