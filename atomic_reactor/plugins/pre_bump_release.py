@@ -46,6 +46,23 @@ class BumpReleasePlugin(PreBuildPlugin):
             }
         self.xmlrpc = create_koji_session(hub, koji_auth_info)
 
+    def get_patched_release(self, original_release, force_increment=False):
+        # Split the original release by dots, make sure there at least 3 items in parts list
+        parts = original_release.split('.', 2) + [None, None]
+        release, suffix, rest = parts[:3]
+
+        if force_increment:
+            # Increment first part as a number
+            release = str(int(release) + 1)
+
+        # Remove second part if it's a number
+        if suffix is not None and suffix.isdigit():
+            suffix = None
+
+        # Recombine the parts
+        return '.'.join([part for part in [release, suffix, rest]
+                         if part is not None])
+
     def run(self):
         """
         run the plugin
@@ -74,7 +91,7 @@ class BumpReleasePlugin(PreBuildPlugin):
 
         build_info = {'name': component, 'version': version}
         self.log.debug('getting next release from build info: %s', build_info)
-        next_release = self.xmlrpc.getNextRelease(build_info)
+        next_release = self.get_patched_release(self.xmlrpc.getNextRelease(build_info))
 
         # getNextRelease will return the release of the last successful build
         # but next_release might be a failed build. Koji's CGImport doesn't
@@ -87,7 +104,7 @@ class BumpReleasePlugin(PreBuildPlugin):
             if not build:
                 break
 
-            next_release = str(int(next_release) + 1)
+            next_release = self.get_patched_release(next_release, force_increment=True)
 
         # Always set preferred release label - other will be set if old-style
         # label is present
