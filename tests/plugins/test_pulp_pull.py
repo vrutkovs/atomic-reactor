@@ -368,3 +368,10 @@ class TestPostPulpPull(object):
         plugin = PulpPullPlugin(tasker, workflow)
         with pytest.raises(requests.exceptions.HTTPError):
             plugin.run()
+
+    def test_plugin_type(self):
+        # arrangement versions < 4
+        assert issubclass(PulpPullPlugin, PostBuildPlugin)
+
+        # arrangement version >= 4
+        assert issubclass(PulpPullPlugin, ExitPlugin)
