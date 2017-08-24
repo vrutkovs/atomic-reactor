@@ -145,11 +145,16 @@ class KojiImportPlugin(ExitPlugin):
                 extra['image']['help'] = None
 
     def set_media_types(self, extra, worker_metadatas):
+        self.log.info("set_media_types+")
         for platform in worker_metadatas:
+            self.log.info("platform: '%s'", platform)
             annotations = get_worker_build_info(self.workflow, platform).build.get_annotations()
+            self.log.info("annotations: '%s'", annotations)
             if annotations.get('media-types'):
+                self.log.info("media-types: '%s'", annotations.get('media-types'))
                 extra['image']['media_types'] = json.loads(annotations['media-types'])
                 return
+        self.log.info("set_media_types-")
 
     def set_manifest_list_info(self, extra, worker_metadatas):
         manifest_list_digests = self.workflow.postbuild_results.get(PLUGIN_GROUP_MANIFESTS_KEY)
