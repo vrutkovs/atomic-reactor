@@ -146,7 +146,7 @@ class KojiImportPlugin(ExitPlugin):
 
     def set_media_types(self, extra, worker_metadatas):
         self.log.info("set_media_types+")
-        pulp_pull_results = self.workflow.postbuild_results.get(PLUGIN_PULP_PULL_KEY)
+        pulp_pull_results = self.workflow.exit_results.get(PLUGIN_PULP_PULL_KEY)
         self.log.info("pulp_pull_results: %s", pulp_pull_results)
         if pulp_pull_results:
             _, media_types = pulp_pull_results
