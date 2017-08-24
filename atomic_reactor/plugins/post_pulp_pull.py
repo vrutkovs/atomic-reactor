@@ -108,11 +108,14 @@ class PulpPullPlugin(ExitPlugin, PostBuildPlugin):
                                               self.insecure, self.secret,
                                               require_digest=False)
             if digests and digests.v2:
+                self.log.info("digests: %s", digests)
+                self.log.info("digests.v2: %s", digests.v2)
                 self.log.info("V2 schema 2 digest found, returning %s",
                               self.workflow.builder.image_id)
                 media_types.append('application/vnd.docker.distribution.manifest.v2+json')
                 # No need to pull the image to work out the image ID as
                 # we already know it.
+                self.log.info("returning %s", (self.workflow.builder.image_id, sorted(media_types)))
                 return self.workflow.builder.image_id, sorted(media_types)
             else:
                 self.log.info("V2 schema 2 digest is not available")

@@ -159,10 +159,15 @@ class KojiImportPlugin(ExitPlugin):
         manifest_list_digests = self.workflow.postbuild_results.get(PLUGIN_GROUP_MANIFESTS_KEY)
         # group_manifests returns either a list of manifest digests of the manifest lists,
         # or a list of the image_manifests
+        self.log.info("manifest_list_digests: %s", manifest_list_digests)
+        self.log.info("type(manifest_list_digests): %s", type(manifest_list_digests))
+        self.log.info("isinstance(manifest_list_digests[0], dict): %s", isinstance(manifest_list_digests[0], dict))
         if manifest_list_digests and not isinstance(manifest_list_digests[0], dict):
             index = {}
             index['tags'] = [image.tag for image in self.workflow.tag_conf.images]
+            self.log.info("index: %s", index)
             repositories = self.workflow.build_result.annotations['repositories']['unique']
+            self.log.info("repositories: %s", repositories)
             repo = ImageName.parse(repositories[0]).repo
             # group_manifests added the registry, so this should be valid
             registries = self.workflow.push_conf.pulp_registries
@@ -174,11 +179,12 @@ class KojiImportPlugin(ExitPlugin):
                 pullspec = "{0}/{1}@{2}".format(registry.uri, repo,
                                                 manifest_list_digests[0].v2_list)
                 index['pull'] = [pullspec]
+                self.log.info("pullspec: %s", pullspec)
                 for tag in index['tags']:
                     pullspec = "{0}/{1}:{2}".format(registry.uri, repo, tag)
                     index['pull'].append(pullspec)
             extra['image']['index'] = index
-        self.log.info("image.index: %s", extra['image']['index'])
+            self.log.info("index: %s", index)
         self.log.info("set_manifest_list_info-")
 
     def get_build(self, metadata, worker_metadatas):
