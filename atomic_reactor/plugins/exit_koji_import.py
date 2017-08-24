@@ -155,6 +155,7 @@ class KojiImportPlugin(ExitPlugin):
         self.log.info("set_media_types-")
 
     def set_manifest_list_info(self, extra, worker_metadatas):
+        self.log.info("set_manifest_list_info+")
         manifest_list_digests = self.workflow.postbuild_results.get(PLUGIN_GROUP_MANIFESTS_KEY)
         # group_manifests returns either a list of manifest digests of the manifest lists,
         # or a list of the image_manifests
@@ -165,8 +166,10 @@ class KojiImportPlugin(ExitPlugin):
             repo = ImageName.parse(repositories[0]).repo
             # group_manifests added the registry, so this should be valid
             registries = self.workflow.push_conf.pulp_registries
+            self.log.info("registries: %s", registries)
             if not registries:
                 registries = self.workflow.push_conf.all_registries
+            self.log.info("registries: %s", registries)
             for registry in registries:
                 pullspec = "{0}/{1}@{2}".format(registry.uri, repo,
                                                 manifest_list_digests[0].v2_list)
@@ -175,6 +178,8 @@ class KojiImportPlugin(ExitPlugin):
                     pullspec = "{0}/{1}:{2}".format(registry.uri, repo, tag)
                     index['pull'].append(pullspec)
             extra['image']['index'] = index
+        self.log.info("image.index: %s", extra['image']['index'])
+        self.log.info("set_manifest_list_info-")
 
     def get_build(self, metadata, worker_metadatas):
         start_time = int(atomic_reactor_start_time)
