@@ -107,7 +107,7 @@ class PulpPullPlugin(ExitPlugin, PostBuildPlugin):
                                               pullspec, registry.uri,
                                               self.insecure, self.secret,
                                               require_digest=False)
-            if digests and digests.v2 and self.workflow.builder.image_id:
+            if digests and digests.v2:
                 self.log.info("digests: %s", digests)
                 self.log.info("digests.v2: %s", digests.v2)
                 self.log.info("V2 schema 2 digest found, returning %s",
