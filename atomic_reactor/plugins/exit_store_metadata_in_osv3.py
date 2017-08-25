@@ -250,10 +250,13 @@ class StoreMetadataInOSv3Plugin(ExitPlugin):
             })
 
         annotations.update(self.get_config_map())
-        self.log.info("1 annotations: %s", annotations)
 
         self.apply_build_result_annotations(annotations)
-        self.log.info("2 annotations: %s", annotations)
+
+        # If pulp_pull has ran on orchestrator, then repositories have to be restored, otherwise
+        # these would contain worker builds only
+        if self.workflow.exit_results[PulpPullPlugin.key]:
+            annotations['repositories'] = json.dumps(self.get_repositories())
 
         try:
             osbs.set_annotations_on_build(build_id, annotations)
