@@ -92,9 +92,12 @@ class StoreMetadataInOSv3Plugin(ExitPlugin):
     def get_repositories(self):
         # usually repositories formed from NVR labels
         # these should be used for pulling and layering
+        self.log.info("get_repositories+")
         primary_repositories = []
         for registry in self._get_registries():
+            self.log.info("registry: %s", registry.uri)
             for image in self.workflow.tag_conf.primary_images:
+                self.log.info("image: %s", image)
                 registry_image = image.copy()
                 registry_image.registry = registry.uri
                 primary_repositories.append(registry_image.to_str())
@@ -102,11 +105,16 @@ class StoreMetadataInOSv3Plugin(ExitPlugin):
         # unique unpredictable repositories
         unique_repositories = []
         for registry in self._get_registries():
+            self.log.info("registry: %s", registry.uri)
             for image in self.workflow.tag_conf.unique_images:
+                self.log.info("image: %s", image)
                 registry_image = image.copy()
                 registry_image.registry = registry.uri
                 unique_repositories.append(registry_image.to_str())
 
+        self.log.info("primary_repositories: %s", primary_repositories)
+        self.log.info("unique_repositories: %s", unique_repositories)
+        self.log.info("get_repositories-")
         return {
             "primary": primary_repositories,
             "unique": unique_repositories,
@@ -155,6 +163,7 @@ class StoreMetadataInOSv3Plugin(ExitPlugin):
 
     def apply_build_result_annotations(self, annotations):
         updates = self.workflow.build_result.annotations
+        self.log.info("updates: %s", updates)
         if updates:
             updates = {key: json.dumps(value) for key, value in updates.items()}
             annotations.update(updates)
@@ -241,8 +250,10 @@ class StoreMetadataInOSv3Plugin(ExitPlugin):
             })
 
         annotations.update(self.get_config_map())
+        self.log.info("1 annotations: %s", annotations)
 
         self.apply_build_result_annotations(annotations)
+        self.log.info("2 annotations: %s", annotations)
 
         try:
             osbs.set_annotations_on_build(build_id, annotations)
