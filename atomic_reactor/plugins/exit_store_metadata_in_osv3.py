@@ -87,7 +87,10 @@ class StoreMetadataInOSv3Plugin(ExitPlugin):
         """
         Return a list of registries that this build updated
         """
-        return self.workflow.push_conf.all_registries
+        registries = self.workflow.push_conf.pulp_registries
+        if not registries:
+            registries = self.workflow.push_conf.all_registries
+        return registries
 
     def get_repositories(self):
         # usually repositories formed from NVR labels
