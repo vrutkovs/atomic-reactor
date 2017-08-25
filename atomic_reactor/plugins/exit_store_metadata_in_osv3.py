@@ -95,12 +95,9 @@ class StoreMetadataInOSv3Plugin(ExitPlugin):
     def get_repositories(self):
         # usually repositories formed from NVR labels
         # these should be used for pulling and layering
-        self.log.info("get_repositories+")
         primary_repositories = []
         for registry in self._get_registries():
-            self.log.info("registry: %s", registry.uri)
             for image in self.workflow.tag_conf.primary_images:
-                self.log.info("image: %s", image)
                 registry_image = image.copy()
                 registry_image.registry = registry.uri
                 primary_repositories.append(registry_image.to_str())
@@ -108,16 +105,11 @@ class StoreMetadataInOSv3Plugin(ExitPlugin):
         # unique unpredictable repositories
         unique_repositories = []
         for registry in self._get_registries():
-            self.log.info("registry: %s", registry.uri)
             for image in self.workflow.tag_conf.unique_images:
-                self.log.info("image: %s", image)
                 registry_image = image.copy()
                 registry_image.registry = registry.uri
                 unique_repositories.append(registry_image.to_str())
 
-        self.log.info("primary_repositories: %s", primary_repositories)
-        self.log.info("unique_repositories: %s", unique_repositories)
-        self.log.info("get_repositories-")
         return {
             "primary": primary_repositories,
             "unique": unique_repositories,
@@ -231,7 +223,7 @@ class StoreMetadataInOSv3Plugin(ExitPlugin):
             top_layer, _ = pulp_push_results
             annotations['v1-image-id'] = top_layer
 
-        pulp_pull_results = self.workflow.postbuild_results.get(PulpPullPlugin.key)
+        pulp_pull_results = self.workflow.exit_results.get(PulpPullPlugin.key)
         if pulp_pull_results:
             _, media_types = pulp_pull_results
             annotations['media-types'] = json.dumps(media_types)
@@ -253,13 +245,17 @@ class StoreMetadataInOSv3Plugin(ExitPlugin):
             })
 
         annotations.update(self.get_config_map())
+        self.log.info("1 annotations: %s", annotations)
 
         self.apply_build_result_annotations(annotations)
 
+        self.log.info("2 annotations: %s", annotations)
         # If pulp_pull has ran on orchestrator, then repositories have to be restored, otherwise
         # these would contain worker builds only
-        if self.workflow.exit_results[PulpPullPlugin.key]:
+        if pulp_pull_results:
             annotations['repositories'] = json.dumps(self.get_repositories())
+
+        self.log.info("3 annotations: %s", annotations)
 
         try:
             osbs.set_annotations_on_build(build_id, annotations)
