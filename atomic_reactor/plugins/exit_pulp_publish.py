@@ -118,7 +118,7 @@ class PulpPublishPlugin(ExitPlugin):
                     self.pulp_handler.remove_image(repo_id, v1_image_id)
 
     def run(self):
-        if self.workflow.build_process_failed:
+        if self.workflow.build_process_failed or True:
             self.delete_v1_layers()
             return []
         else:
