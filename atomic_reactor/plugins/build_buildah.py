@@ -12,7 +12,7 @@ from atomic_reactor.plugin import BuildStepPlugin
 from atomic_reactor.util import get_exported_image_metadata
 from atomic_reactor.constants import IMAGE_TYPE_DOCKER_ARCHIVE
 
-from subprocess import Popen, PIPE, STDOUT
+from subprocess import Popen, PIPE, STDOUT, check_call
 import os.path
 
 
