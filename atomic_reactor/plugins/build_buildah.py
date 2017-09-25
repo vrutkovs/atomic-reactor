@@ -10,7 +10,7 @@ from __future__ import print_function, unicode_literals
 from atomic_reactor.build import BuildResult
 from atomic_reactor.plugin import BuildStepPlugin
 from atomic_reactor.util import get_exported_image_metadata
-from atomic_reactor.constants import IMAGE_TYPE_DOCKER_ARCHIVE, BUILDAH_IMAGE_NAME
+from atomic_reactor.constants import IMAGE_TYPE_DOCKER_ARCHIVE
 
 from subprocess import Popen, PIPE, STDOUT
 import os.path
@@ -44,7 +44,7 @@ class BuildahPlugin(BuildStepPlugin):
             'buildah',
             'bud',
             '--pull=false',
-            '--tag', BUILDAH_IMAGE_NAME,
+            '--tag', image,
             '--format', 'docker',
             builder.df_dir,
         ]
