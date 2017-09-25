@@ -77,13 +77,12 @@ class PostBuildRPMqaPlugin(PostBuildPlugin):
             self.log.debug("ignore rpms 'gpg-pubkey'")
             plugin_output = [x for x in plugin_output if not x.startswith("gpg-pubkey" + self.sep)]
 
-        volumes = self.tasker.get_volumes_for_container(container_id)
-
         if self.use_buildah:
             cmd = ['buildah', 'rm', container_id]
             self.log.debug(' '.join(cmd))
             self.log.debug(check_output(cmd))
         else:
+            volumes = self.tasker.get_volumes_for_container(container_id)
             try:
                 self.tasker.remove_container(container_id)
             except APIError:
