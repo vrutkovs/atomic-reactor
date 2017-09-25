@@ -40,32 +40,6 @@ class BuildahPlugin(BuildStepPlugin):
     def run(self):
         builder = self.workflow.builder
 
-        self.log.debug('Creating a temp ramdisk')
-        cmd = ['mkdir', '-p', '/var/lib/containers/storage']
-        check_call(cmd)
-        cmd = ['mount', '-t', 'tmpfs', '-o', 'size=20G', 'tmpfs', '/var/lib/containers/storage']
-        check_call(cmd)
-
-        self.log.debug('Copying image using skopeo')
-        base_image_id = self.workflow.base_image_inspect['Id']
-        cmd = [
-            'skopeo',
-            'copy',
-            "docker-daemon:{}".format(base_image_id),
-            "containers-storage:{}".format(base_image_id),
-        ]
-        self.log.debug(' '.join(cmd))
-        skopeo_process = Popen(cmd, stdout=PIPE, stderr=STDOUT)
-        lines = []
-        with skopeo_process.stdout:
-            for line in iter(skopeo_process.stdout.readline, ''):
-                self.log.info(line.strip())
-                lines.append(line)
-        skopeo_process.wait()
-
-        if skopeo_process.returncode != 0:
-            raise RuntimeError("image is not copied")
-
         self.log.debug('Building image')
         image = builder.image.to_str()
         cmd = [

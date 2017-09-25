@@ -21,7 +21,8 @@ class PullBaseImagePlugin(PreBuildPlugin):
     key = "pull_base_image"
     is_allowed_to_fail = False
 
-    def __init__(self, tasker, workflow, parent_registry=None, parent_registry_insecure=False):
+    def __init__(self, tasker, workflow, parent_registry=None, parent_registry_insecure=False,
+                 use_skopeo=False):
         """
         constructor
 
@@ -29,12 +30,14 @@ class PullBaseImagePlugin(PreBuildPlugin):
         :param workflow: DockerBuildWorkflow instance
         :param parent_registry: registry to enforce pulling from
         :param parent_registry_insecure: allow connecting to the registry over plain http
+        :param use_skopeo: bool, use skopeo to pull the base image
         """
         # call parent constructor
         super(PullBaseImagePlugin, self).__init__(tasker, workflow)
 
         self.parent_registry = parent_registry
         self.parent_registry_insecure = parent_registry_insecure
+        self.use_skopeo = use_skopeo
 
     def run(self):
         """
@@ -63,14 +66,16 @@ class PullBaseImagePlugin(PreBuildPlugin):
             base_image_with_registry.registry = self.parent_registry
 
         pulled_base = self.tasker.pull_image(base_image_with_registry,
-                                             insecure=self.parent_registry_insecure)
+                                             insecure=self.parent_registry_insecure,
+                                             use_skopeo=self.use_skopeo)
         if (base_image_with_registry.namespace != 'library' and
                 not self.tasker.image_exists(base_image_with_registry.to_str())):
             self.log.info("'%s' not found", base_image_with_registry.to_str())
             base_image_with_registry.namespace = 'library'
             self.log.info("trying '%s'", base_image_with_registry.to_str())
             pulled_base = self.tasker.pull_image(base_image_with_registry,
-                                                 insecure=self.parent_registry_insecure)
+                                                 insecure=self.parent_registry_insecure,
+                                                 use_skopeo=self.use_skopeo)
 
         self.workflow.pulled_base_images.add(pulled_base)
 
@@ -95,7 +100,8 @@ class PullBaseImagePlugin(PreBuildPlugin):
                 # Retry the pull immediately.
                 self.log.info("re-pulling removed image")
                 self.tasker.pull_image(base_image_with_registry,
-                                       insecure=self.parent_registry_insecure)
+                                       insecure=self.parent_registry_insecure,
+                                       use_skopeo=self.use_skopeo)
         else:
             # Failed to tag it
             self.log.error("giving up trying to pull image")

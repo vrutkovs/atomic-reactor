@@ -31,6 +31,7 @@ import requests
 import time
 import docker
 from docker.errors import APIError
+from subprocess import check_call, Popen, PIPE, STDOUT
 
 from atomic_reactor.constants import CONTAINER_SHARE_PATH, CONTAINER_SHARE_SOURCE_SUBDIR,\
         BUILD_JSON, DOCKER_SOCKET_PATH, DOCKER_MAX_RETRIES, DOCKER_BACKOFF_FACTOR,\
@@ -460,24 +461,65 @@ class DockerTasker(LastLogger):
         logger.debug("%d matching images found", len(images))
         return images
 
-    def pull_image(self, image, insecure=False):
+    def pull_image(self, image, insecure=False, use_skopeo=False):
         """
         pull provided image from registry
 
         :param image_name: ImageName, image to pull
         :param insecure: bool, allow connecting to registry over plain http
+        :param use_skopeo: bool, use skopeo to pull the image
         :return: str, image (reg.om/img:v1)
         """
         logger.info("pulling image '%s' from registry", image)
         logger.debug("image = '%s', insecure = '%s'", image, insecure)
-        try:
-            logs_gen = self.d.pull(image.to_str(tag=False), tag=image.tag,
-                                   insecure_registry=insecure, decode=True, stream=True)
-        except TypeError:
-            # because changing api is fun
-            logs_gen = self.d.pull(image.to_str(tag=False), tag=image.tag, decode=True, stream=True)
-        command_result = wait_for_command(logs_gen)
-        self.last_logs = command_result.logs
+        if not use_skopeo:
+            try:
+                logs_gen = self.d.pull(image.to_str(tag=False), tag=image.tag,
+                                       insecure_registry=insecure, decode=True, stream=True)
+            except TypeError:
+                # because changing api is fun
+                logs_gen = self.d.pull(image.to_str(tag=False), tag=image.tag, decode=True, stream=True)
+            command_result = wait_for_command(logs_gen)
+            self.last_logs = command_result.logs
+        else:
+            self.log.debug('Creating a temp ramdisk')
+            cmd = ['mkdir', '-p', '/var/lib/containers/storage']
+            check_call(cmd)
+            cmd = ['mount', '-t', 'tmpfs', '-o', 'size=20G', 'tmpfs', '/var/lib/containers/storage']
+            check_call(cmd)
+            # Pull the image
+            self.log.debug('Pulling the image')
+            cmd = ["skopeo", "copy",
+                   "docker://{}".format(image.to_str()),
+                   "containers-storage:{}".format(image.to_str())]
+            self.log.debug(' '.join(cmd))
+            skopeo_process = Popen(cmd, stdout=PIPE, stderr=STDOUT)
+            lines = []
+            with skopeo_process.stdout:
+                for line in iter(skopeo_process.stdout.readline, ''):
+                    self.log.info(line.strip())
+                    lines.append(line)
+            skopeo_process.wait()
+            if skopeo_process.returncode != 0:
+                raise RuntimeError("image is not copied")
+            # Copy pulled image to docker daemon
+            self.log.debug('Copying the image to docker daemon')
+            cmd = [
+                "skopeo",
+                "copy",
+                "containers-storage:{}".format(image.to_str()),
+                "docker-daemon:{}".format(image.to_str()),
+            ]
+            self.log.debug(' '.join(cmd))
+            skopeo_process = Popen(cmd, stdout=PIPE, stderr=STDOUT)
+            lines = []
+            with skopeo_process.stdout:
+                for line in iter(skopeo_process.stdout.readline, ''):
+                    self.log.info(line.strip())
+                    lines.append(line)
+            skopeo_process.wait()
+            if skopeo_process.returncode != 0:
+                raise RuntimeError("image is not copied")
         return image.to_str()
 
     def tag_image(self, image, target_image, force=False):
