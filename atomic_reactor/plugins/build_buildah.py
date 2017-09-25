@@ -61,7 +61,7 @@ class BuildahPlugin(BuildStepPlugin):
             return BuildResult(logs=lines, fail_reason="image not built")
 
         self.log.debug('Fetching image ID')
-        image_id = builder.tasker.get_image_id_via_skopeo("container-storage:{}".format(image))
+        image_id = builder.tasker.get_image_id_via_skopeo("containers-storage:{}".format(image))
         self.log.debug("image ID: {}".format(image_id))
         result = BuildResult(logs=lines, image_id=image_id)
 
