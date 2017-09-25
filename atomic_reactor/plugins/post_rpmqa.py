@@ -38,6 +38,7 @@ class PostBuildRPMqaPlugin(PostBuildPlugin):
 
         :param tasker: DockerTasker instance
         :param workflow: DockerBuildWorkflow instance
+        :param use_buildah: Use OCI tools instead of docker
         """
         # call parent constructor
         super(PostBuildRPMqaPlugin, self).__init__(tasker, workflow)
