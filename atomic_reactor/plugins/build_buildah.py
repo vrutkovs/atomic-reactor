@@ -12,9 +12,8 @@ from atomic_reactor.plugin import BuildStepPlugin
 from atomic_reactor.util import get_exported_image_metadata
 from atomic_reactor.constants import IMAGE_TYPE_DOCKER_ARCHIVE
 
-from subprocess import Popen, PIPE, STDOUT, check_call, check_output
+from subprocess import Popen, PIPE, STDOUT
 import os.path
-import json
 
 
 EXPORTED_BUILT_IMAGE_NAME = 'built-image.tar'
