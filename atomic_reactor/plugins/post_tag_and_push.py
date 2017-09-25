@@ -27,7 +27,7 @@ class TagAndPushPlugin(PostBuildPlugin):
     key = "tag_and_push"
     is_allowed_to_fail = False
 
-    def __init__(self, tasker, workflow, registries, use_buildah=True):
+    def __init__(self, tasker, workflow, registries, force_use_skopeo=True):
         """
         constructor
 
@@ -40,15 +40,16 @@ class TagAndPushPlugin(PostBuildPlugin):
                               plain HTTP.
                             * "secret" optional string - path to the secret, which stores
                               email, login and password for remote registry
-        :param use_buildah: bool, push using buildah
+        :param force_use_skopeo: bool, always push using skopeo
         """
         # call parent constructor
         super(TagAndPushPlugin, self).__init__(tasker, workflow)
 
         self.registries = deepcopy(registries)
+        self.force_use_skopeo = force_use_skopeo
 
     def need_skopeo_push(self):
-        if len(self.workflow.exported_image_sequence) > 0:
+        if len(self.workflow.exported_image_sequence) > 0 or self.force_use_skopeo:
             last_image = self.workflow.exported_image_sequence[-1]
             if last_image['type'] == IMAGE_TYPE_OCI or last_image['type'] == IMAGE_TYPE_OCI_TAR:
                 return True

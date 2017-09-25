@@ -58,7 +58,7 @@ class PostBuildRPMqaPlugin(PostBuildPlugin):
 
             # Run command in container
             cmd = ['buildah', 'run', container_id, '--',
-                   '/bin/rpm', "-qa --qf '{0}\n'".format(fmt)]
+                   '/bin/rpm', "-qa --qf '{0}\\n'".format(fmt)]
             self.log.debug(' '.join(cmd))
             plugin_output = check_output(cmd)
         else:
