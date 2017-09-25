@@ -72,10 +72,11 @@ class BuildahPlugin(BuildStepPlugin):
             cmd = [
                 "skopeo",
                 "copy",
-                "containers-storage:{}".format(image),
+                "containers-storage:docker.io/{}".format(image),
                 "docker-archive:{0}:{1}".format(outfile, image),
             ]
             self.log.debug(' '.join(cmd))
+            check_call(['sleep', 'infinity'])
             skopeo_process = Popen(cmd, stdout=PIPE, stderr=STDOUT)
             lines = []
             with skopeo_process.stdout:
