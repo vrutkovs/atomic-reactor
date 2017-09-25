@@ -628,7 +628,7 @@ class DockerTasker(LastLogger):
         logger.debug("image = '%s', target_image = '%s'", image, target_image)
         self.tag_image(image, target_image, force=force)
         if dockercfg:
-            loggerin(registry=target_image.registry, docker_secret_path=dockercfg)
+            self.login(registry=target_image.registry, docker_secret_path=dockercfg)
         return self.push_image(target_image, insecure=insecure)
 
     def inspect_image(self, image_id):
