@@ -520,6 +520,30 @@ class DockerTasker(LastLogger):
             skopeo_process.wait()
             if skopeo_process.returncode != 0:
                 raise RuntimeError("image is not copied")
+
+            # buildah can't find by image id, so we have to tag it again
+            logger.debug('Fetching image ID')
+            image_name = "docker.io/{}".format(image.to_str())
+            images = self.d.images(name=image_name)
+            image_id = images[0]['Id']
+
+            cmd = [
+                "skopeo",
+                "copy",
+                "containers-storage:{}".format(image.to_str()),
+                "containers-storage:{}".format(image_id),
+            ]
+            logger.debug(' '.join(cmd))
+            skopeo_process = Popen(cmd, stdout=PIPE, stderr=STDOUT)
+            lines = []
+            with skopeo_process.stdout:
+                for line in iter(skopeo_process.stdout.readline, ''):
+                    logger.info(line.strip())
+                    lines.append(line)
+            skopeo_process.wait()
+            if skopeo_process.returncode != 0:
+                raise RuntimeError("image is not copied")
+
         return image.to_str()
 
     def tag_image(self, image, target_image, force=False):
