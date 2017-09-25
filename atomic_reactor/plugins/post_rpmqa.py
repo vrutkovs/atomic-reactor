@@ -57,9 +57,8 @@ class PostBuildRPMqaPlugin(PostBuildPlugin):
             container_id = check_output(cmd).strip()
 
             # Run command in container
-            cmd = ['buildah', 'run', container_id, '--',
-                   '/bin/rpm', "-qa --qf '{0}\\n'".format(fmt)]
-            self.log.debug(' '.join(cmd))
+            cmd = "buildah run {0} -- /bin/rpm -qa --qf '{1}\n'".format(container_id, fmt)
+            self.log.debug(cmd)
             plugin_output = check_output(cmd, shell=True)
         else:
             container_id = self.tasker.run(
@@ -80,7 +79,7 @@ class PostBuildRPMqaPlugin(PostBuildPlugin):
         if self.use_buildah:
             cmd = ['buildah', 'rm', container_id]
             self.log.debug(' '.join(cmd))
-            self.log.debug(check_output(cmd))
+            check_output(cmd)
         else:
             volumes = self.tasker.get_volumes_for_container(container_id)
             try:
