@@ -69,9 +69,22 @@ class BuildahPlugin(BuildStepPlugin):
             self.log.info('Saving image into archive')
             outfile = os.path.join(self.workflow.source.workdir,
                                    EXPORTED_BUILT_IMAGE_NAME)
-
-            with open(outfile, 'w+b') as archive:
-                archive.write(self.tasker.d.get_image(image).data)
+            cmd = [
+                "skopeo",
+                "copy",
+                "containers-storage:{}".format(image),
+                "docker-archive:{0}:{1}".format(outfile, image),
+            ]
+            self.log.debug(' '.join(cmd))
+            skopeo_process = Popen(cmd, stdout=PIPE, stderr=STDOUT)
+            lines = []
+            with skopeo_process.stdout:
+                for line in iter(skopeo_process.stdout.readline, ''):
+                    self.log.info(line.strip())
+                    lines.append(line)
+            skopeo_process.wait()
+            if skopeo_process.returncode != 0:
+                raise RuntimeError("archive is not created")
 
             metadata = get_exported_image_metadata(outfile, IMAGE_TYPE_DOCKER_ARCHIVE)
             self.workflow.exported_image_sequence.append(metadata)
