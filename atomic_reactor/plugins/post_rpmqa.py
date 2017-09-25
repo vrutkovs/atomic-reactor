@@ -7,6 +7,7 @@ of the BSD license. See the LICENSE file for details.
 """
 
 from atomic_reactor.plugin import PostBuildPlugin
+from atomic_reactor.constants import BUILDAH_IMAGE_NAME
 from docker.errors import APIError
 from subprocess import check_output
 
@@ -51,7 +52,7 @@ class PostBuildRPMqaPlugin(PostBuildPlugin):
 
         if self.use_buildah:
             # Create a new container
-            cmd = ['buildah', 'from', self.image_id]
+            cmd = ['buildah', 'from', BUILDAH_IMAGE_NAME]
             self.log.debug(' '.join(cmd))
             container_id = check_output(cmd)
 

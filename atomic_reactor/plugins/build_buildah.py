@@ -10,14 +10,13 @@ from __future__ import print_function, unicode_literals
 from atomic_reactor.build import BuildResult
 from atomic_reactor.plugin import BuildStepPlugin
 from atomic_reactor.util import get_exported_image_metadata
-from atomic_reactor.constants import IMAGE_TYPE_DOCKER_ARCHIVE
+from atomic_reactor.constants import IMAGE_TYPE_DOCKER_ARCHIVE, BUILDAH_IMAGE_NAME
 
 from subprocess import Popen, PIPE, STDOUT
 import os.path
 
 
 EXPORTED_BUILT_IMAGE_NAME = 'built-image.tar'
-IMAGE_NAME = "image:latest"
 
 
 class BuildahPlugin(BuildStepPlugin):
@@ -46,7 +45,7 @@ class BuildahPlugin(BuildStepPlugin):
             'buildah',
             'bud',
             '--pull=false',
-            '--tag', IMAGE_NAME,
+            '--tag', BUILDAH_IMAGE_NAME,
             '--format', 'docker',
             builder.df_dir,
         ]
@@ -67,7 +66,7 @@ class BuildahPlugin(BuildStepPlugin):
             cmd = [
                 'buildah',
                 'push',
-                IMAGE_NAME,
+                BUILDAH_IMAGE_NAME,
                 'docker-daemon:{}'.format(image),
             ]
             self.log.debug(' '.join(cmd))
