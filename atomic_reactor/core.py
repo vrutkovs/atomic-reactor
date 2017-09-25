@@ -30,8 +30,9 @@ import json
 import requests
 import time
 import docker
+import json
 from docker.errors import APIError
-from subprocess import check_call, Popen, PIPE, STDOUT
+from subprocess import check_call, check_output, Popen, PIPE, STDOUT
 
 from atomic_reactor.constants import CONTAINER_SHARE_PATH, CONTAINER_SHARE_SOURCE_SUBDIR,\
         BUILD_JSON, DOCKER_SOCKET_PATH, DOCKER_MAX_RETRIES, DOCKER_BACKOFF_FACTOR,\
@@ -502,30 +503,9 @@ class DockerTasker(LastLogger):
             skopeo_process.wait()
             if skopeo_process.returncode != 0:
                 raise RuntimeError("image is not copied")
-            # Copy pulled image to docker daemon
-            logger.debug('Copying the image to docker daemon')
-            cmd = [
-                "skopeo",
-                "copy",
-                "containers-storage:{}".format(image.to_str()),
-                "docker-daemon:{}".format(image.to_str()),
-            ]
-            logger.debug(' '.join(cmd))
-            skopeo_process = Popen(cmd, stdout=PIPE, stderr=STDOUT)
-            lines = []
-            with skopeo_process.stdout:
-                for line in iter(skopeo_process.stdout.readline, ''):
-                    logger.info(line.strip())
-                    lines.append(line)
-            skopeo_process.wait()
-            if skopeo_process.returncode != 0:
-                raise RuntimeError("image is not copied")
-
             # buildah can't find by image id, so we have to tag it again
-            logger.debug('Fetching image ID')
-            image_name = "docker.io/{}".format(image.to_str())
-            images = self.d.images(name=image_name)
-            image_id = images[0]['Id']
+            image_id = self.get_image_id_via_skopeo(
+                "containers-storage:{}".format(image.to_str()))
 
             cmd = [
                 "skopeo",
@@ -545,6 +525,13 @@ class DockerTasker(LastLogger):
                 raise RuntimeError("image is not copied")
 
         return image.to_str()
+
+    def get_image_id_via_skopeo(self, image):
+        cmd = ["skopeo", "inspect", image, "--raw"]
+        logger.debug(' '.join(cmd))
+        image_manifest_str = check_output(cmd)
+        image_manifest = json.loads(image_manifest_str)
+        return image_manifest["config"]["digest"]
 
     def tag_image(self, image, target_image, force=False):
         """

@@ -79,9 +79,8 @@ class BuildahPlugin(BuildStepPlugin):
             return BuildResult(logs=lines, fail_reason="push to docker failed")
 
         self.log.debug('Fetching image ID')
-        image_name = "docker.io/{}".format(image)
-        images = builder.tasker.d.images(name=image_name)
-        image_id = images[0]['Id']
+        image_id = builder.tasker.get_image_id_via_skopeo(
+            'docker-daemon:{}'.format(image))
         self.log.debug("image ID: {}".format(image_id))
         result = BuildResult(logs=lines, image_id=image_id)
 
