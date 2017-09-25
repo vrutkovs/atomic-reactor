@@ -27,7 +27,7 @@ class TagAndPushPlugin(PostBuildPlugin):
     key = "tag_and_push"
     is_allowed_to_fail = False
 
-    def __init__(self, tasker, workflow, registries):
+    def __init__(self, tasker, workflow, registries, use_buildah=True):
         """
         constructor
 
@@ -40,6 +40,7 @@ class TagAndPushPlugin(PostBuildPlugin):
                               plain HTTP.
                             * "secret" optional string - path to the secret, which stores
                               email, login and password for remote registry
+        :param use_buildah: bool, push using buildah
         """
         # call parent constructor
         super(TagAndPushPlugin, self).__init__(tasker, workflow)

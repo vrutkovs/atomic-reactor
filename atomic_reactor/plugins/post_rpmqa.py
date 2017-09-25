@@ -54,7 +54,7 @@ class PostBuildRPMqaPlugin(PostBuildPlugin):
             # Create a new container
             cmd = ['buildah', 'from', BUILDAH_IMAGE_NAME]
             self.log.debug(' '.join(cmd))
-            container_id = check_output(cmd)
+            container_id = check_output(cmd).strip()
 
             # Run command in container
             cmd = ['buildah', 'run', container_id, '--',
