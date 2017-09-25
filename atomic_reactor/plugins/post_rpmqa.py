@@ -59,7 +59,7 @@ class PostBuildRPMqaPlugin(PostBuildPlugin):
             # Run command in container
             cmd = "buildah run {0} -- /bin/rpm -qa --qf '{1}\n'".format(container_id, fmt)
             self.log.debug(cmd)
-            plugin_output = check_output(cmd, shell=True)
+            plugin_output = check_output(cmd, shell=True).split('\n')
         else:
             container_id = self.tasker.run(
                 self.image_id,
