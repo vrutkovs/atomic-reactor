@@ -482,40 +482,40 @@ class DockerTasker(LastLogger):
             command_result = wait_for_command(logs_gen)
             self.last_logs = command_result.logs
         else:
-            self.log.debug('Creating a temp ramdisk')
+            logger.debug('Creating a temp ramdisk')
             cmd = ['mkdir', '-p', '/var/lib/containers/storage']
             check_call(cmd)
             cmd = ['mount', '-t', 'tmpfs', '-o', 'size=20G', 'tmpfs', '/var/lib/containers/storage']
             check_call(cmd)
             # Pull the image
-            self.log.debug('Pulling the image')
+            logger.debug('Pulling the image')
             cmd = ["skopeo", "copy",
                    "docker://{}".format(image.to_str()),
                    "containers-storage:{}".format(image.to_str())]
-            self.log.debug(' '.join(cmd))
+            logger.debug(' '.join(cmd))
             skopeo_process = Popen(cmd, stdout=PIPE, stderr=STDOUT)
             lines = []
             with skopeo_process.stdout:
                 for line in iter(skopeo_process.stdout.readline, ''):
-                    self.log.info(line.strip())
+                    logger.info(line.strip())
                     lines.append(line)
             skopeo_process.wait()
             if skopeo_process.returncode != 0:
                 raise RuntimeError("image is not copied")
             # Copy pulled image to docker daemon
-            self.log.debug('Copying the image to docker daemon')
+            logger.debug('Copying the image to docker daemon')
             cmd = [
                 "skopeo",
                 "copy",
                 "containers-storage:{}".format(image.to_str()),
                 "docker-daemon:{}".format(image.to_str()),
             ]
-            self.log.debug(' '.join(cmd))
+            logger.debug(' '.join(cmd))
             skopeo_process = Popen(cmd, stdout=PIPE, stderr=STDOUT)
             lines = []
             with skopeo_process.stdout:
                 for line in iter(skopeo_process.stdout.readline, ''):
-                    self.log.info(line.strip())
+                    logger.info(line.strip())
                     lines.append(line)
             skopeo_process.wait()
             if skopeo_process.returncode != 0:
@@ -617,7 +617,7 @@ class DockerTasker(LastLogger):
         logger.debug("image = '%s', target_image = '%s'", image, target_image)
         self.tag_image(image, target_image, force=force)
         if dockercfg:
-            self.login(registry=target_image.registry, docker_secret_path=dockercfg)
+            loggerin(registry=target_image.registry, docker_secret_path=dockercfg)
         return self.push_image(target_image, insecure=insecure)
 
     def inspect_image(self, image_id):
