@@ -25,7 +25,7 @@ class BuildahPlugin(BuildStepPlugin):
     key = 'buildah'
     buildah_params = []
 
-    def __init__(self, tasker, workflow, export_image=True):
+    def __init__(self, tasker, workflow, export_image=True, push_to_docker=True):
         """
         constructor
 
@@ -35,6 +35,7 @@ class BuildahPlugin(BuildStepPlugin):
         """
         super(BuildahPlugin, self).__init__(tasker, workflow)
         self.export_image = export_image
+        self.push_to_docker = push_to_docker
 
     def run(self):
         builder = self.workflow.builder
@@ -61,26 +62,29 @@ class BuildahPlugin(BuildStepPlugin):
         if bud_process.returncode != 0:
             return BuildResult(logs=lines, fail_reason="image not built")
 
-        self.log.debug('Pushing image back to docker')
-        cmd = [
-            'buildah',
-            'push',
-            IMAGE_NAME,
-            'docker-daemon:{}'.format(image),
-        ]
-        self.log.debug(' '.join(cmd))
-        push_process = Popen(cmd, stdout=PIPE, stderr=STDOUT)
-        with push_process.stdout:
-            for line in iter(push_process.stdout.readline, ''):
-                self.log.info(line.strip())
-                lines.append(line)
-        push_process.wait()
-        if push_process.returncode != 0:
-            return BuildResult(logs=lines, fail_reason="push to docker failed")
+        if self.push_to_docker:
+            self.log.debug('Pushing image back to docker')
+            cmd = [
+                'buildah',
+                'push',
+                IMAGE_NAME,
+                'docker-daemon:{}'.format(image),
+            ]
+            self.log.debug(' '.join(cmd))
+            push_process = Popen(cmd, stdout=PIPE, stderr=STDOUT)
+            with push_process.stdout:
+                for line in iter(push_process.stdout.readline, ''):
+                    self.log.info(line.strip())
+                    lines.append(line)
+            push_process.wait()
+            if push_process.returncode != 0:
+                return BuildResult(logs=lines, fail_reason="push to docker failed")
 
+        image_name = "container-storage:{}".format(image)
+        if self.push_to_docker:
+            image_name = "docker-daemon:{}".format(image)
         self.log.debug('Fetching image ID')
-        image_id = builder.tasker.get_image_id_via_skopeo(
-            'docker-daemon:{}'.format(image))
+        image_id = builder.tasker.get_image_id_via_skopeo(image_name)
         self.log.debug("image ID: {}".format(image_id))
         result = BuildResult(logs=lines, image_id=image_id)
 
