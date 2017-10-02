@@ -2,4 +2,4 @@
 -r tests/requirements.txt
 pytest-cov
 pyflakes
-pep8
+pep8==1.7.0
