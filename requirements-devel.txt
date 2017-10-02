@@ -1,5 +1,5 @@
 -r requirements.txt
 -r tests/requirements.txt
 pytest-cov
-pyflakes
+pyflakes==1.6.0
 pep8
